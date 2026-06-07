@@ -34,6 +34,12 @@ export interface AnchorRate {
   /** Discriminates the origin of the rate data. */
   source: 'sep38' | 'sep24-fee' | 'unavailable';
   expiresAt?: Date | undefined;
+  /**
+   * SEP-38 firm quote id, when this rate originated from a quote server.
+   * Two anchors that proxy the same liquidity pool can return the same id;
+   * the rates engine dedupes on this field. Absent for non-SEP-38 sources.
+   */
+  quoteId?: string;
   /** Row-level quote lifecycle state. Only meaningful for source === 'sep38'. */
   quoteStatus?: 'firm' | 'expiring' | 'refreshing';
 }
