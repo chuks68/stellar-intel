@@ -48,6 +48,8 @@ export interface UseAnchorRatesResult {
   error: string | undefined;
   mutate: () => Promise<void>;
   refreshInflight: boolean;
+  pauseRefresh: () => void;
+  resumeRefresh: () => void;
 }
 
 export function useAnchorRates(corridorId: string, amount: string): UseAnchorRatesResult {
@@ -181,7 +183,7 @@ export function useAnchorRates(corridorId: string, amount: string): UseAnchorRat
   }, [data, refreshInflight]);
 
   const refresh = useCallback(async () => {
-    if (refreshInflight) return;
+    if (refreshInflight || refreshPausedRef.current) return;
 
     setRefreshInflight(true);
 
@@ -202,5 +204,7 @@ export function useAnchorRates(corridorId: string, amount: string): UseAnchorRat
     error: error?.message,
     mutate: refresh,
     refreshInflight,
+    pauseRefresh,
+    resumeRefresh,
   };
 }

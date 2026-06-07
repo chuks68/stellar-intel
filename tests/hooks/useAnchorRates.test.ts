@@ -38,6 +38,10 @@ beforeEach(() => {
   vi.useRealTimers()
 })
 
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 describe('useAnchorRates', () => {
   it('is loading on initial render', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
