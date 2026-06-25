@@ -8,6 +8,12 @@ export interface Anchor {
   corridors: string[]; // corridor IDs this anchor serves
   assetCode: string;
   assetIssuer: string;
+  /**
+   * Optional service domain distinct from home domain.
+   * When present, SEP endpoints are resolved from this domain instead of homeDomain.
+   * Example: home domain "mgusd.moneygram.com" (issuer-only) vs service domain "stellar.moneygram.com" (SEP endpoints).
+   */
+  serviceDomain?: string;
 }
 
 /** A payment corridor from one asset to a fiat currency in a given country. */

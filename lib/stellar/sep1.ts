@@ -115,6 +115,25 @@ function requireTomlField(
 }
 
 /**
+ * Detects if a domain appears to be issuer-only (not hosting service endpoints).
+ * Issuer-only domains typically contain issuer-specific subdomains (e.g., "mgusd.moneygram.com")
+ * whereas service domains are generic service subdomains (e.g., "stellar.moneygram.com").
+ *
+ * @param homeDomain - The home domain to check
+ * @param serviceDomain - Optional explicit service domain; if provided and different from homeDomain, homeDomain is issuer-only
+ * @returns true if domain appears to be issuer-only, false otherwise
+ */
+export function isIssuerOnlyDomain(homeDomain: string, serviceDomain?: string): boolean {
+  // If a service domain is explicitly provided and differs from home domain,
+  // the home domain is issuer-only
+  if (serviceDomain && serviceDomain !== homeDomain) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Resolves a clickable support href from SEP-1 documentation fields.
  * Priority: ORG_SUPPORT_URL → mailto:ORG_SUPPORT_EMAIL → ORG_URL (https only).
  */
@@ -218,10 +237,15 @@ export async function getWebAuthEndpoint(domain: string): Promise<string> {
 /**
  * Resolves stellar.toml for all known anchors in parallel.
  * Anchors that fail resolution are skipped.
+ * For each anchor, uses serviceDomain if available, otherwise falls back to homeDomain.
  */
 export async function resolveAllAnchors(): Promise<Record<string, ResolvedAnchor>> {
   const results = await Promise.allSettled(
-    ANCHORS.map((anchor) => resolveAnchor(anchor.homeDomain).then((data) => ({ anchor, data })))
+    ANCHORS.map((anchor) => {
+      // Use serviceDomain if provided, otherwise use homeDomain
+      const domainToResolve = anchor.serviceDomain || anchor.homeDomain;
+      return resolveAnchor(domainToResolve).then((data) => ({ anchor, data }));
+    })
   );
 
   const resolved: Record<string, ResolvedAnchor> = {};

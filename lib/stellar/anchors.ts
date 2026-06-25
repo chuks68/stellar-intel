@@ -37,7 +37,9 @@ export async function getResolvedAnchorByDomain(homeDomain: string): Promise<Res
 export async function getResolvedAnchorById(id: string): Promise<ResolvedAnchor> {
   const anchor = getAnchorById(id);
   const { resolveToml } = await import('./sep1');
-  const result = await resolveToml(anchor.homeDomain);
+  // Use serviceDomain if provided, otherwise fall back to homeDomain
+  const domainToResolve = anchor.serviceDomain || anchor.homeDomain;
+  const result = await resolveToml(domainToResolve);
   if (!result.ok) throw new Error(result.error);
   return { ...anchor, ...result.data };
 }
@@ -53,6 +55,7 @@ export function getAnchorsByCorridorId(corridorId: string): Anchor[] {
 /**
  * Resolves SEP-1 details for every known anchor that serves the corridor.
  * Failed anchors are omitted so callers can continue with the live subset.
+ * For each anchor, uses serviceDomain if available, otherwise falls back to homeDomain.
  */
 export async function discoverAnchorsForCorridor(corridorId: string): Promise<ResolvedAnchor[]> {
   const { resolveToml } = await import('./sep1');
@@ -60,7 +63,9 @@ export async function discoverAnchorsForCorridor(corridorId: string): Promise<Re
 
   const results = await Promise.allSettled(
     corridorAnchors.map(async (anchor): Promise<ResolvedAnchor> => {
-      const result = await resolveToml(anchor.homeDomain);
+      // Use serviceDomain if provided, otherwise fall back to homeDomain
+      const domainToResolve = anchor.serviceDomain || anchor.homeDomain;
+      const result = await resolveToml(domainToResolve);
       if (!result.ok) throw new Error(result.error);
       const sep1 = result.data;
       if (!sep1.TRANSFER_SERVER_SEP0024 || !sep1.WEB_AUTH_ENDPOINT) {

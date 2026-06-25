@@ -16,6 +16,7 @@ export const ANCHORS: Anchor[] = [
     id: 'moneygram',
     name: 'MoneyGram',
     homeDomain: 'stellar.moneygram.com',
+    serviceDomain: 'stellar.moneygram.com',
     corridors: ['usdc-ngn', 'usdc-kes', 'usdc-ghs', 'usdc-mxn', 'usdc-brl'],
     assetCode: 'USDC',
     assetIssuer: USDC_ISSUER,
