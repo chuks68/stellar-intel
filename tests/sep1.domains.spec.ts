@@ -61,7 +61,9 @@ describe('SEP-1 Home-Domain vs Service-Domain Resolution', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.data.TRANSFER_SERVER_SEP0024).toBe(serviceTomlResponse.TRANSFER_SERVER_SEP0024);
+        expect(result.data.TRANSFER_SERVER_SEP0024).toBe(
+          serviceTomlResponse.TRANSFER_SERVER_SEP0024
+        );
         expect(result.data.WEB_AUTH_ENDPOINT).toBe(serviceTomlResponse.WEB_AUTH_ENDPOINT);
         expect(result.data.SIGNING_KEY).toBe(serviceTomlResponse.SIGNING_KEY);
         expect(result.data.capabilities.sep24).toBe(true);
@@ -200,9 +202,7 @@ describe('SEP-1 Home-Domain vs Service-Domain Resolution', () => {
         ORG_SUPPORT_URL: 'https://support.moneygram.com',
       };
 
-      vi.spyOn(StellarToml.Resolver, 'resolve').mockResolvedValue(
-        moneygramServiceResponse as any
-      );
+      vi.spyOn(StellarToml.Resolver, 'resolve').mockResolvedValue(moneygramServiceResponse as any);
 
       // In the anchor config, MoneyGram now has serviceDomain === homeDomain
       // (both point to stellar.moneygram.com)
@@ -210,12 +210,8 @@ describe('SEP-1 Home-Domain vs Service-Domain Resolution', () => {
 
       expect(resolved.id).toBe('moneygram');
       expect(resolved.corridors).toContain('usdc-ngn');
-      expect(resolved.TRANSFER_SERVER_SEP0024).toBe(
-        'https://api.stellar.moneygram.com/sep24'
-      );
-      expect(resolved.WEB_AUTH_ENDPOINT).toBe(
-        'https://api.stellar.moneygram.com/auth'
-      );
+      expect(resolved.TRANSFER_SERVER_SEP0024).toBe('https://api.stellar.moneygram.com/sep24');
+      expect(resolved.WEB_AUTH_ENDPOINT).toBe('https://api.stellar.moneygram.com/auth');
       expect(resolved.capabilities.sep24).toBe(true);
       expect(resolved.capabilities.sep10).toBe(true);
       expect(resolved.capabilities.sep38).toBe(true);
