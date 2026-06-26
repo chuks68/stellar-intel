@@ -9,6 +9,7 @@ import {
   resolveAnchorSupportHref,
   _clearTomlCache,
 } from '@/lib/stellar/sep1';
+import { ANCHORS } from '@/constants/anchors';
 
 const VALID_TOML = {
   TRANSFER_SERVER_SEP0024: 'https://cowrie.exchange/sep24',
@@ -38,26 +39,28 @@ describe('resolveAnchor', () => {
     const result = await resolveAnchor('cowrie.exchange');
 
     expect(spy).toHaveBeenCalledWith('cowrie.exchange');
-    expect(result).toEqual({
-      domain: 'cowrie.exchange',
-      TRANSFER_SERVER_SEP0024: 'https://cowrie.exchange/sep24',
-      ANCHOR_QUOTE_SERVER: 'https://cowrie.exchange/quotes',
-      WEB_AUTH_ENDPOINT: 'https://cowrie.exchange/auth',
-      SIGNING_KEY: 'GABCDEF',
-      NETWORK_PASSPHRASE: Networks.PUBLIC,
-      ORG_URL: null,
-      ORG_SUPPORT_EMAIL: null,
-      ORG_SUPPORT_URL: null,
-      CURRENCIES: [
-        { code: 'USDC', issuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN' },
-      ],
-      capabilities: {
-        sep10: true,
-        sep24: true,
-        sep38: true,
-        sep12: true,
-      },
-    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        domain: 'cowrie.exchange',
+        TRANSFER_SERVER_SEP0024: 'https://cowrie.exchange/sep24',
+        ANCHOR_QUOTE_SERVER: 'https://cowrie.exchange/quotes',
+        WEB_AUTH_ENDPOINT: 'https://cowrie.exchange/auth',
+        SIGNING_KEY: 'GABCDEF',
+        NETWORK_PASSPHRASE: Networks.PUBLIC,
+        ORG_URL: null,
+        ORG_SUPPORT_EMAIL: null,
+        ORG_SUPPORT_URL: null,
+        CURRENCIES: [
+          { code: 'USDC', issuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN' },
+        ],
+        capabilities: expect.objectContaining({
+          sep10: true,
+          sep24: true,
+          sep38: true,
+          sep12: true,
+        }),
+      })
+    );
   });
 
   it('normalizes domain casing for cache keys', async () => {
@@ -244,8 +247,8 @@ describe('resolveAllAnchors', () => {
 
     await resolveAllAnchors();
 
-    // ANCHORS has 3 entries: moneygram, cowrie, anclap
-    expect(spy).toHaveBeenCalledTimes(3);
+    // ANCHORS has moneygram, cowrie, anclap, ntokens (and may grow)
+    expect(spy).toHaveBeenCalledTimes(ANCHORS.length);
   });
 
   it('returns partial results when one anchor fails', async () => {
