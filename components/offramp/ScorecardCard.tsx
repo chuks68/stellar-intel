@@ -19,6 +19,9 @@ import {
 } from '@/lib/oracle/freshness';
 import { ANCHORS } from '@/constants';
 import type { AnchorMetadata } from '@/types';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { composite, NORM_SETTLE_SECONDS } from '@/lib/reputation/composite';
+import { Info } from 'lucide-react';
 
 type ReputationWindow = '7d' | '30d' | '90d';
 
@@ -229,6 +232,48 @@ function FreshnessBadge({ freshness }: { freshness: FreshnessResult | null }) {
 }
 
 const STELLAR_EXPERT_TX_BASE = 'https://stellar.expert/explorer/public/tx';
+const METHODOLOGY_DOC_URL =
+  'https://github.com/ezedike-evan/stellar-intel/blob/main/docs/ANCHOR_REPUTATION.md';
+
+function CompositeScoreBreakdown({
+  fillRate,
+  slippageP50,
+  settleP50,
+  sampleSize,
+}: {
+  fillRate: number | null;
+  slippageP50: number | null;
+  settleP50: number | null;
+  sampleSize: number;
+}) {
+  const fillRatePercent = fillRate !== null ? formatFillRate(fillRate) : '—';
+  const slippagePercent = slippageP50 !== null ? formatPercent(slippageP50) : '—';
+  const settleSeconds = settleP50 !== null ? formatSeconds(settleP50) : '—';
+
+  return (
+    <div className="space-y-2">
+      <p className="font-medium text-gray-900 dark:text-white">
+        composite = fill rate × (1 − slippage) ÷ (settle ÷ {NORM_SETTLE_SECONDS}s)
+      </p>
+      <ul className="space-y-1">
+        <li>Fill rate: {fillRatePercent}</li>
+        <li>Slippage (p50): {slippagePercent}</li>
+        <li>Settle (p50): {settleSeconds}</li>
+      </ul>
+      <p className="text-gray-500 dark:text-gray-400">
+        Sample size: {sampleSize} outcome{sampleSize !== 1 ? 's' : ''}
+      </p>
+      <a
+        href={METHODOLOGY_DOC_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-block text-blue-600 hover:underline dark:text-blue-400"
+      >
+        Methodology docs
+      </a>
+    </div>
+  );
+}
 
 function MetadataSection({ metadata }: { metadata: AnchorMetadata }) {
   const hasRegions = metadata.regions?.senders || metadata.regions?.receivers;
@@ -369,6 +414,15 @@ export function ScorecardCard({
   const remaining = MIN_OUTCOMES_THRESHOLD - metrics.outcomesCount;
   const anchorMetadata = ANCHORS.find((a) => a.id === anchorId)?.metadata;
 
+  const compositeScore =
+    metrics.fillRate !== null && metrics.slippageP50 !== null && metrics.settleP50 !== null
+      ? composite({
+          fillRate: metrics.fillRate > 1 ? metrics.fillRate / 100 : metrics.fillRate,
+          slippage: metrics.slippageP50 / 100,
+          settleSeconds: metrics.settleP50,
+        })
+      : null;
+
   return (
     <Card className="space-y-4">
       <div className="flex flex-col gap-1">
@@ -428,6 +482,33 @@ export function ScorecardCard({
       ) : (
         <div className="space-y-4">
           <FreshnessBadge freshness={freshness} />
+          {compositeScore !== null && (
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/60">
+              <div className="flex items-center gap-1.5">
+                <dt className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Composite score
+                </dt>
+                <Tooltip
+                  content={
+                    <CompositeScoreBreakdown
+                      fillRate={metrics.fillRate}
+                      slippageP50={metrics.slippageP50}
+                      settleP50={metrics.settleP50}
+                      sampleSize={metrics.outcomesCount}
+                    />
+                  }
+                >
+                  <Info
+                    className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500"
+                    aria-label="How the composite score is calculated"
+                  />
+                </Tooltip>
+              </div>
+              <dd className="mt-3 text-2xl font-semibold text-gray-900 dark:text-white">
+                {compositeScore.toFixed(2)}
+              </dd>
+            </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/60">
               <dt className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">

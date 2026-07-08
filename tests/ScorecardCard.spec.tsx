@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 vi.mock('@/constants', () => ({
   ANCHORS: [
@@ -222,5 +223,35 @@ describe('ScorecardCard', () => {
     expect(await screen.findByText('Fill rate')).toBeInTheDocument();
     expect(screen.queryByText('Regions')).not.toBeInTheDocument();
     expect(screen.queryByText('KYC model')).not.toBeInTheDocument();
+  });
+
+  it('renders the composite score with a methodology tooltip', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        fill_rate: 95,
+        settle_p50: 300,
+        settle_p95: 400,
+        slippage_p50: 1,
+        slippage_p95: 2,
+        outcomes_count: 42,
+      }),
+    });
+
+    const user = userEvent.setup();
+    render(<ScorecardCard anchorId="example.anchor" window="30d" />);
+
+    expect(await screen.findByText('Composite score')).toBeInTheDocument();
+    // fillRate=0.95, slippage=0.01, settleSeconds=300 (== NORM_SETTLE_SECONDS) => 0.95 * 0.99 / 1
+    expect(screen.getByText('0.94')).toBeInTheDocument();
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    await user.tab(); // skip the oracle-tx link (absent here) / focus the info trigger
+    expect(screen.getByRole('tooltip')).toHaveTextContent(/composite = fill rate/);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Sample size: 42 outcomes');
+    expect(screen.getByRole('link', { name: 'Methodology docs' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('ANCHOR_REPUTATION.md')
+    );
   });
 });
