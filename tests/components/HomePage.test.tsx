@@ -22,6 +22,26 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+vi.mock('@/hooks/useAnchorRates', () => ({
+  useAnchorRates: () => ({
+    rates: {
+      rates: [
+        {
+          anchorId: 'anchor-a',
+          anchorName: 'Anchor A',
+          exchangeRate: 1600,
+          fee: 1,
+          totalReceived: 158000,
+          source: 'sep38',
+        },
+      ],
+      bestRateId: 'anchor-a',
+    },
+    isLoading: false,
+    error: undefined,
+  }),
+}));
+
 describe('HomePage', () => {
   it('renders execution-layer hero copy', () => {
     const { getByRole } = render(<HomePage />);

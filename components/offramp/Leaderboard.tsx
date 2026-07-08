@@ -7,9 +7,11 @@ import type { Corridor } from '@/types';
 
 interface LeaderboardProps {
   corridor: Corridor;
+  /** Cap the number of rows rendered — used by the landing-page teaser variant. */
+  limit?: number;
 }
 
-export function Leaderboard({ corridor }: LeaderboardProps) {
+export function Leaderboard({ corridor, limit }: LeaderboardProps) {
   const { rates, isLoading, error } = useAnchorRates(corridor.id, '100');
   const currency = corridor.to.toUpperCase();
 
@@ -60,7 +62,7 @@ export function Leaderboard({ corridor }: LeaderboardProps) {
           </tr>
         </thead>
         <tbody>
-          {rates.rates.map((rate, index) => {
+          {(limit ? rates.rates.slice(0, limit) : rates.rates).map((rate, index) => {
             const isBest = rate.anchorId === rates.bestRateId;
             const isUnavailable = rate.source === 'unavailable';
 

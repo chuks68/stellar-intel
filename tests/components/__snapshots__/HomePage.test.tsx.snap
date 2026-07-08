@@ -78,34 +78,81 @@ exports[`HomePage > matches snapshot 1`] = `
           >
             <div>
               <div
-                aria-hidden="true"
-                class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 mb-3 h-6 w-32 rounded-full"
-              />
+                class="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-trending-up h-3.5 w-3.5"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M16 7h6v6"
+                  />
+                  <path
+                    d="m22 7-8.5 8.5-5-5L2 17"
+                  />
+                </svg>
+                Live rate preview
+              </div>
+              <p
+                class="text-sm text-gray-500 dark:text-gray-400"
+              >
+                Previewing the best live quote for 100 USDC → NGN.
+              </p>
               <div
-                aria-hidden="true"
-                class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 h-4 w-64"
-              />
+                class="mt-5 text-sm font-medium text-gray-500 dark:text-gray-400"
+              >
+                Best live quote
+              </div>
               <div
-                aria-hidden="true"
-                class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 mt-5 h-4 w-24"
-              />
+                class="mt-1 text-3xl font-bold text-gray-900 dark:text-white"
+              >
+                NGN 158,000.00
+              </div>
               <div
-                aria-hidden="true"
-                class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 mt-2 h-9 w-40"
-              />
+                class="mt-2 text-sm text-gray-600 dark:text-gray-300"
+              >
+                Anchor A
+              </div>
               <div
-                aria-hidden="true"
-                class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 mt-3 h-4 w-32"
-              />
-              <div
-                aria-hidden="true"
-                class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 mt-2 h-4 w-48"
-              />
+                class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+              >
+                1 USDC = 1,600 NGN
+              </div>
             </div>
-            <div
-              aria-hidden="true"
-              class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 mt-6 h-4 w-36"
-            />
+            <a
+              href="/offramp"
+            >
+              Compare all live rates
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-arrow-right h-4 w-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5 12h14"
+                />
+                <path
+                  d="m12 5 7 7-7 7"
+                />
+              </svg>
+            </a>
           </div>
         </div>
         <div
@@ -116,94 +163,101 @@ exports[`HomePage > matches snapshot 1`] = `
           >
             <div>
               <div
-                aria-hidden="true"
-                class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 mb-3 h-6 w-36 rounded-full"
-              />
-              <div
-                aria-hidden="true"
-                class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 h-4 w-56"
-              />
+                class="mb-3 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-trophy h-3.5 w-3.5"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978"
+                  />
+                  <path
+                    d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978"
+                  />
+                  <path
+                    d="M18 9h1.5a1 1 0 0 0 0-5H18"
+                  />
+                  <path
+                    d="M4 22h16"
+                  />
+                  <path
+                    d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"
+                  />
+                  <path
+                    d="M6 9H4.5a1 1 0 0 1 0-5H6"
+                  />
+                </svg>
+                Leaderboard teaser
+              </div>
+              <p
+                class="text-sm text-gray-500 dark:text-gray-400"
+              >
+                Top anchors in the default USDC/NGN corridor right now.
+              </p>
               <div
                 class="mt-5 space-y-3"
               >
                 <div
-                  class="rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-700"
+                  class="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-700"
                 >
-                  <div
-                    class="flex items-center justify-between gap-4"
-                  >
+                  <div>
                     <div
-                      class="space-y-2"
+                      class="text-sm font-medium text-gray-900 dark:text-white"
                     >
-                      <div
-                        aria-hidden="true"
-                        class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 h-4 w-28"
-                      />
-                      <div
-                        aria-hidden="true"
-                        class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 h-3 w-20"
-                      />
+                      #
+                      1
+                       
+                      Anchor A
                     </div>
                     <div
-                      aria-hidden="true"
-                      class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 h-4 w-20"
-                    />
+                      class="text-xs text-gray-500 dark:text-gray-400"
+                    >
+                      Current landed value
+                    </div>
                   </div>
-                </div>
-                <div
-                  class="rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-700"
-                >
                   <div
-                    class="flex items-center justify-between gap-4"
+                    class="text-sm font-semibold text-gray-900 dark:text-white"
                   >
-                    <div
-                      class="space-y-2"
-                    >
-                      <div
-                        aria-hidden="true"
-                        class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 h-4 w-28"
-                      />
-                      <div
-                        aria-hidden="true"
-                        class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 h-3 w-20"
-                      />
-                    </div>
-                    <div
-                      aria-hidden="true"
-                      class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 h-4 w-20"
-                    />
-                  </div>
-                </div>
-                <div
-                  class="rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-700"
-                >
-                  <div
-                    class="flex items-center justify-between gap-4"
-                  >
-                    <div
-                      class="space-y-2"
-                    >
-                      <div
-                        aria-hidden="true"
-                        class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 h-4 w-28"
-                      />
-                      <div
-                        aria-hidden="true"
-                        class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 h-3 w-20"
-                      />
-                    </div>
-                    <div
-                      aria-hidden="true"
-                      class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 h-4 w-20"
-                    />
+                    NGN 158,000.00
                   </div>
                 </div>
               </div>
             </div>
-            <div
-              aria-hidden="true"
-              class="animate-pulse rounded-md bg-gray-200 dark:bg-gray-700 mt-6 h-4 w-40"
-            />
+            <a
+              href="/anchors?corridor=usdc-ngn"
+            >
+              View corridor leaderboard
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-arrow-right h-4 w-4"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5 12h14"
+                />
+                <path
+                  d="m12 5 7 7-7 7"
+                />
+              </svg>
+            </a>
           </div>
         </div>
       </div>
@@ -755,6 +809,144 @@ exports[`HomePage > matches snapshot 1`] = `
         />
       </svg>
     </a>
+  </section>
+  <section
+    class="transition-all duration-700 ease-out opacity-0 translate-y-8 motion-reduce:transition-none motion-reduce:transform-none motion-reduce:opacity-100"
+    style="transition-delay: 0ms;"
+  >
+    <section
+      aria-labelledby="leaderboard-teaser-heading"
+    >
+      <div
+        class="mb-4 flex flex-wrap items-end justify-between gap-2"
+      >
+        <div>
+          <h2
+            class="text-lg font-semibold text-gray-900 dark:text-white"
+            id="leaderboard-teaser-heading"
+          >
+            Anchor leaderboard
+          </h2>
+          <p
+            class="mt-1 text-sm text-gray-600 dark:text-gray-400"
+          >
+            Live payout ranking for 
+            USDC
+             → 
+            NGN
+            , updated every 30s.
+          </p>
+        </div>
+        <a
+          href="/anchors"
+        >
+          See full leaderboard
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-arrow-right h-3.5 w-3.5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 12h14"
+            />
+            <path
+              d="m12 5 7 7-7 7"
+            />
+          </svg>
+        </a>
+      </div>
+      <div
+        class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700"
+      >
+        <table
+          class="w-full text-sm"
+        >
+          <thead>
+            <tr
+              class="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50"
+            >
+              <th
+                class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-400"
+              >
+                Rank
+              </th>
+              <th
+                class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-400"
+              >
+                Anchor
+              </th>
+              <th
+                class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-400"
+              >
+                Rate (per USDC)
+              </th>
+              <th
+                class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-400"
+              >
+                Fee
+              </th>
+              <th
+                class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-400"
+              >
+                You Receive
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              class="border-t border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20"
+            >
+              <td
+                class="px-4 py-3 text-gray-500 dark:text-gray-400"
+              >
+                #1
+              </td>
+              <td
+                class="px-4 py-3"
+              >
+                <div
+                  class="flex items-center gap-2"
+                >
+                  <span
+                    class="font-medium text-gray-900 dark:text-white"
+                  >
+                    Anchor A
+                  </span>
+                  <span
+                    class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                  >
+                    Best
+                  </span>
+                </div>
+              </td>
+              <td
+                class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"
+              >
+                1 USDC = 1,600 NGN
+              </td>
+              <td
+                class="px-4 py-3 text-right text-gray-700 dark:text-gray-300"
+              >
+                $1.00
+              </td>
+              <td
+                class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white"
+              >
+                NGN 158,000.00
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </section>
   <section>
     <h2

@@ -6,6 +6,7 @@ import { StatBar } from '@/components/landing/StatBar';
 import { CorridorStrip } from '@/components/landing/CorridorStrip';
 import { LogoWall } from '@/components/landing/LogoWall';
 import { ComparisonTeaser } from '@/components/landing/ComparisonTeaser';
+import { LeaderboardTeaser } from '@/components/landing/LeaderboardTeaser';
 import { RatePreview } from '@/components/landing/RatePreview';
 import { Faq } from '@/components/landing/Faq';
 import { FeatureGrid } from '@/components/landing/FeatureGrid';
@@ -74,6 +75,11 @@ export default function HomePage() {
 
       {/* Comparison teaser */}
       <ComparisonTeaser />
+
+      {/* Reputation leaderboard teaser */}
+      <LandingSection delay={185}>
+        <LeaderboardTeaser />
+      </LandingSection>
 
       {/* Live rate preview */}
       <section>
