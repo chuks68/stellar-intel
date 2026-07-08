@@ -17,6 +17,8 @@ import {
   getFreshnessBadgeColor,
   type FreshnessResult,
 } from '@/lib/oracle/freshness';
+import { ANCHORS } from '@/constants';
+import type { AnchorMetadata } from '@/types';
 
 type ReputationWindow = '7d' | '30d' | '90d';
 
@@ -228,6 +230,63 @@ function FreshnessBadge({ freshness }: { freshness: FreshnessResult | null }) {
 
 const STELLAR_EXPERT_TX_BASE = 'https://stellar.expert/explorer/public/tx';
 
+function MetadataSection({ metadata }: { metadata: AnchorMetadata }) {
+  const hasRegions = metadata.regions?.senders || metadata.regions?.receivers;
+  if (!hasRegions && !metadata.kycModel && !metadata.feeModel) return null;
+
+  return (
+    <dl className="grid gap-3 sm:grid-cols-2">
+      {hasRegions && (
+        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/60">
+          <dt className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            Regions
+          </dt>
+          <dd className="mt-2 space-y-1 text-sm text-gray-900 dark:text-gray-100">
+            {metadata.regions?.senders && (
+              <p>
+                <span className="text-gray-500 dark:text-gray-400">Senders: </span>
+                {metadata.regions.senders}
+              </p>
+            )}
+            {metadata.regions?.receivers && (
+              <p>
+                <span className="text-gray-500 dark:text-gray-400">Receivers: </span>
+                {metadata.regions.receivers}
+              </p>
+            )}
+          </dd>
+        </div>
+      )}
+      {(metadata.kycModel || metadata.feeModel) && (
+        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/60">
+          {metadata.kycModel && (
+            <>
+              <dt className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                KYC model
+              </dt>
+              <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">{metadata.kycModel}</dd>
+            </>
+          )}
+          {metadata.feeModel && (
+            <>
+              <dt
+                className={
+                  metadata.kycModel
+                    ? 'mt-3 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400'
+                    : 'text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400'
+                }
+              >
+                Fees
+              </dt>
+              <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">{metadata.feeModel}</dd>
+            </>
+          )}
+        </div>
+      )}
+    </dl>
+  );
+}
+
 export function ScorecardCard({
   anchorId,
   window: timeframe,
@@ -308,6 +367,7 @@ export function ScorecardCard({
 
   const enoughData = hasEnoughData(metrics.outcomesCount);
   const remaining = MIN_OUTCOMES_THRESHOLD - metrics.outcomesCount;
+  const anchorMetadata = ANCHORS.find((a) => a.id === anchorId)?.metadata;
 
   return (
     <Card className="space-y-4">
@@ -418,6 +478,7 @@ export function ScorecardCard({
               </dd>
             </div>
           </div>
+          {anchorMetadata && <MetadataSection metadata={anchorMetadata} />}
         </div>
       )}
     </Card>

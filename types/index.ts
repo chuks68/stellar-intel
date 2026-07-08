@@ -21,6 +21,24 @@ export interface Anchor {
   serviceDomain?: string;
   /** Known SEP protocol support flags for this anchor. */
   seps?: Array<'sep6' | 'sep10' | 'sep24' | 'sep31' | 'sep38'>;
+  /** Structured operator-supplied metadata, as collected by the anchor onboarding template. */
+  metadata?: AnchorMetadata;
+}
+
+/**
+ * Structured metadata collected via `.github/ISSUE_TEMPLATE/anchor-onboard.yml`.
+ * All fields optional — populated only once an anchor operator has supplied them.
+ */
+export interface AnchorMetadata {
+  /** Sender vs. receiver region coverage; these are rarely identical. */
+  regions?: {
+    senders?: string;
+    receivers?: string;
+  };
+  /** How the anchor performs KYC, per the onboarding template's dropdown options. */
+  kycModel?: string;
+  /** Free-text description of the anchor's fee/spread model. */
+  feeModel?: string;
 }
 
 /** A payment corridor from one asset to a fiat currency in a given country. */

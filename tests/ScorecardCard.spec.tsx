@@ -1,5 +1,24 @@
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+
+vi.mock('@/constants', () => ({
+  ANCHORS: [
+    {
+      id: 'meta.anchor',
+      name: 'Meta Anchor',
+      homeDomain: 'meta.anchor',
+      corridors: ['usdc-ngn'],
+      assetCode: 'USDC',
+      assetIssuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
+      metadata: {
+        regions: { senders: 'All countries', receivers: 'Nigerian residents' },
+        kycModel: 'Anchor-hosted (standard SEP-24 interactive popup)',
+        feeModel: 'Flat $0.50 USDC + 0.5% spread',
+      },
+    },
+  ],
+}));
+
 import { ScorecardCard } from '@/components/offramp/ScorecardCard';
 
 describe('ScorecardCard', () => {
@@ -156,5 +175,52 @@ describe('ScorecardCard', () => {
     // Verify SVG within sparkline exists
     const svg = screen.getByTestId('sparkline-svg');
     expect(svg).toBeInTheDocument();
+  });
+
+  it('round-trips anchor metadata from the registry onto the scorecard', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        fill_rate: 98.7,
+        settle_p50: 21,
+        settle_p95: 95,
+        slippage_p50: 0.4,
+        slippage_p95: 0.85,
+        outcomes_count: 100,
+      }),
+    });
+
+    render(<ScorecardCard anchorId="meta.anchor" window="30d" />);
+
+    expect(await screen.findByText('Fill rate')).toBeInTheDocument();
+    expect(screen.getByText('Regions')).toBeInTheDocument();
+    expect(screen.getByText(/All countries/)).toBeInTheDocument();
+    expect(screen.getByText(/Nigerian residents/)).toBeInTheDocument();
+    expect(screen.getByText('KYC model')).toBeInTheDocument();
+    expect(
+      screen.getByText('Anchor-hosted (standard SEP-24 interactive popup)')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Fees')).toBeInTheDocument();
+    expect(screen.getByText('Flat $0.50 USDC + 0.5% spread')).toBeInTheDocument();
+  });
+
+  it('omits the metadata section when the anchor has none', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        fill_rate: 98.7,
+        settle_p50: 21,
+        settle_p95: 95,
+        slippage_p50: 0.4,
+        slippage_p95: 0.85,
+        outcomes_count: 100,
+      }),
+    });
+
+    render(<ScorecardCard anchorId="example.anchor" window="30d" />);
+
+    expect(await screen.findByText('Fill rate')).toBeInTheDocument();
+    expect(screen.queryByText('Regions')).not.toBeInTheDocument();
+    expect(screen.queryByText('KYC model')).not.toBeInTheDocument();
   });
 });
