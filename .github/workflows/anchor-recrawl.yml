@@ -1,0 +1,86 @@
+name: Monthly Anchor Fleet Re-crawl
+
+on:
+  schedule:
+    # 06:00 UTC on the 1st of each month.
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  recrawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Re-run the full anchor fleet survey
+        run: node scripts/anchor-survey.mjs --json > /tmp/anchor-survey.fresh.json
+
+      - name: Diff against the committed snapshot
+        id: diff
+        shell: bash
+        run: |
+          set +e
+          set -o pipefail
+          node scripts/anchor-diff.mjs /tmp/anchor-survey.fresh.json | tee /tmp/anchor-diff.md
+          CHANGED=$?
+          set -e
+          echo "changed=$CHANGED" >> "$GITHUB_OUTPUT"
+
+      - name: Open tracking issue on fleet change
+        if: steps.diff.outputs.changed == '2'
+        uses: actions/github-script@v9
+        env:
+          DIFF_PATH: /tmp/anchor-diff.md
+        with:
+          script: |
+            const fs = require('fs');
+            const today = new Date().toISOString().slice(0, 10);
+            const summary = fs.readFileSync(process.env.DIFF_PATH, 'utf8').trim();
+            const body = [
+              `Monthly anchor fleet re-crawl (${today}) found changes since the last committed snapshot.`,
+              '',
+              summary,
+              '',
+              `- Workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '',
+              'The updated snapshot has been committed by this workflow. Review new',
+              'transfer-capable domains as onboarding candidates via',
+              '[`docs/ANCHOR_ONBOARDING.md`](../blob/main/docs/ANCHOR_ONBOARDING.md).',
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[anchor-fleet] monthly re-crawl changes — ${today}`,
+              body,
+              labels: ['anchor-fleet'],
+            });
+
+      - name: Commit refreshed snapshot
+        if: steps.diff.outputs.changed == '2'
+        run: |
+          set -euo pipefail
+          cp /tmp/anchor-survey.fresh.json scripts/anchor-survey.snapshot.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet -- scripts/anchor-survey.snapshot.json; then
+            echo "Snapshot unchanged after copy; skipping commit"
+            exit 0
+          fi
+
+          git add scripts/anchor-survey.snapshot.json
+          git commit -m "chore(anchors): refresh fleet survey snapshot $(date -u +%F)"
+          git push
