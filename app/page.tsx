@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Hero } from '@/components/landing/Hero';
 import { StatBar } from '@/components/landing/StatBar';
 import { CorridorStrip } from '@/components/landing/CorridorStrip';
+import { LogoWall } from '@/components/landing/LogoWall';
 import { ComparisonTeaser } from '@/components/landing/ComparisonTeaser';
 import { RatePreview } from '@/components/landing/RatePreview';
 import { Faq } from '@/components/landing/Faq';
@@ -64,6 +65,11 @@ export default function HomePage() {
       {/* Supported corridors */}
       <LandingSection delay={150}>
         <CorridorStrip />
+      </LandingSection>
+
+      {/* Supported anchors */}
+      <LandingSection delay={175}>
+        <LogoWall />
       </LandingSection>
 
       {/* Comparison teaser */}

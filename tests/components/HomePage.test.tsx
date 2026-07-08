@@ -4,6 +4,11 @@ import HomePage from '@/app/page';
 
 vi.mock('@/constants', () => ({
   KNOWN_ANCHORS: [{ id: 'anchor-a' }, { id: 'anchor-b' }, { id: 'anchor-c' }],
+  ANCHORS: [
+    { id: 'anchor-a', name: 'Anchor A', homeDomain: 'anchor-a.example', corridors: [] },
+    { id: 'anchor-b', name: 'Anchor B', homeDomain: 'anchor-b.example', corridors: [] },
+    { id: 'anchor-c', name: 'Anchor C', homeDomain: 'anchor-c.example', corridors: [] },
+  ],
   CORRIDORS: [
     { id: 'usdc-ngn', from: 'USDC', to: 'NGN', countryCode: 'NG', countryName: 'Nigeria' },
     { id: 'usdc-kes', from: 'USDC', to: 'KES', countryCode: 'KE', countryName: 'Kenya' },
