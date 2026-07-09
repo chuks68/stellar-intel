@@ -9,9 +9,13 @@ Source of truth: [`contracts/reputation/`](../contracts/reputation/)
 `tests/basic.rs`).
 
 > **Status.** The contract is implemented and unit-tested
-> (`contracts/reputation/tests/basic.rs`). Mainnet deployment, multi-signer admin,
-> and the public read SDK are roadmap gates — see [`docs/ROADMAP.md`](ROADMAP.md)
-> Wave 2.1. Do not assume a live mainnet address yet.
+> (`contracts/reputation/tests/basic.rs`) and deployed to testnet at
+> `CCZ54NTEOVL2DKWCGJA5XHTHOGRDS7JHFKYWEC6QH2IMZLYNM3FBFKDG` (see
+> `.deployments/testnet.json`), with `submitToOracle`
+> (`packages/publisher/src/batch.ts`) wired against it. Mainnet deployment,
+> multi-signer admin, and the public read SDK are roadmap gates — see
+> [`docs/ROADMAP.md`](ROADMAP.md) Wave 2.1. Do not assume a live mainnet
+> address yet.
 
 ## Contract
 
@@ -56,8 +60,8 @@ read helper and JS/Python example consumers are roadmap deliverables (Wave 2.1).
 
 ```bash
 cd contracts/reputation
-cargo test            # runs tests/basic.rs
-# soroban contract build  # (build/deploy per Soroban toolchain; roadmap for mainnet)
+cargo test                                          # runs tests/basic.rs
+npx tsx scripts/deploy-oracle-testnet.ts             # build + deploy to testnet
 ```
 
 ## Upgrade & governance

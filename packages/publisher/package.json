@@ -2,6 +2,15 @@
   "name": "@stellarintel/publisher",
   "version": "0.1.0",
   "description": "Stellar Intel off-chain publisher - reads outcomes from Postgres and submits batches to the reputation oracle",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ezedike-evan/stellar-intel.git",
+    "directory": "packages/publisher"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

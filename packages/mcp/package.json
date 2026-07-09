@@ -2,6 +2,15 @@
   "name": "@stellarintel/mcp",
   "version": "0.1.0",
   "description": "Stellar Intel MCP server — stdio transport",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ezedike-evan/stellar-intel.git",
+    "directory": "packages/mcp"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {

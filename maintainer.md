@@ -40,8 +40,16 @@
       `vitest.config.mts` for `packages/publisher` (it was silently
       inheriting the root app's config, pointed at a setup file that
       doesn't exist there) and gitignored `packages/*/dist`.
-- [ ] **4. Add README + LICENSE + `repository` +
+- [x] **4. Add README + LICENSE + `repository` +
       `"publishConfig": {"access": "public"}`** to each package.
+      Also added `"license": "MIT"` to each `package.json` (implied by
+      shipping a LICENSE file — avoids the npm-publish "no license
+      field" warning) and refreshed `docs/ORACLE_SPEC.md` to point at
+      the real testnet contract instead of describing it generically.
+      Noted but did not fix: `packages/mcp/package.json`'s `bin` key
+      is the full scoped name (`"@stellarintel/mcp"`), which contains
+      `/` — likely invalid as an npm bin command name; worth checking
+      before publish.
 
 ## 11. Anchor Fleet Status
 
