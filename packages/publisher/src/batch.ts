@@ -1,5 +1,4 @@
 import { createHash } from 'crypto';
-import { contract, Keypair } from '@stellar/stellar-sdk';
 
 export type QueryExecutor = (
   sql: string,
@@ -93,7 +92,7 @@ export function buildOutcomeHash(row: OutcomeRow): string {
   return createHash('sha256').update(payload).digest('hex');
 }
 
-type OracleSubmitClient = contract.Client & {
+interface OracleSubmitClient {
   submit_outcome(args: {
     publisher: string;
     anchor_id: string;
@@ -102,12 +101,17 @@ type OracleSubmitClient = contract.Client & {
     settle_seconds: number;
     success: boolean;
   }): Promise<{ signAndSend(): Promise<{ sendTransactionResponse?: { hash?: string } }> }>;
-};
+}
 
 export async function submitToOracle(
   rows: OutcomeRow[],
   config: Pick<BatchConfig, 'oracleContractId' | 'networkPassphrase' | 'publisherSecret' | 'rpcUrl'>
 ): Promise<string> {
+  // Dynamic import: @stellar/stellar-sdk ships ESM-only types, and this
+  // package builds as CommonJS — a static import would emit a require()
+  // call TS refuses to type-check against an ESM-only module.
+  const { contract, Keypair } = await import('@stellar/stellar-sdk');
+
   const publisherKeypair = Keypair.fromSecret(config.publisherSecret);
   const { signTransaction } = contract.basicNodeSigner(publisherKeypair, config.networkPassphrase);
 

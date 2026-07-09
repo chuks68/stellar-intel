@@ -42,7 +42,25 @@ const BASE_CONFIG: BatchConfig = {
   networkPassphrase: 'Test SDF Network ; September 2015',
   publisherSecret: 'STEST000000000000000000000000000000000000000000000000000000',
   horizonUrl: 'https://horizon-testnet.stellar.org',
+  rpcUrl: 'https://soroban-testnet.stellar.org',
 };
+
+vi.mock('@stellar/stellar-sdk', () => {
+  const submit_outcome = vi.fn().mockResolvedValue({
+    signAndSend: vi.fn().mockResolvedValue({
+      sendTransactionResponse: { hash: 'mock-tx-hash' },
+    }),
+  });
+  return {
+    Keypair: {
+      fromSecret: vi.fn().mockReturnValue({ publicKey: () => 'GPUBLISHERMOCK' }),
+    },
+    contract: {
+      basicNodeSigner: vi.fn().mockReturnValue({ signTransaction: vi.fn() }),
+      Client: { from: vi.fn().mockResolvedValue({ submit_outcome }) },
+    },
+  };
+});
 
 describe('buildOutcomeHash', () => {
   it('produces a 64-char hex string', () => {
@@ -106,8 +124,14 @@ describe('runBatch', () => {
     expect(result).toEqual({ submitted: 0, skipped: 0, txHash: null });
   });
 
-  it('throws when oracle submission is called with pending rows', async () => {
-    const config = { ...BASE_CONFIG, executor: makeExecutor([dbRow(SAMPLE_ROW)]) };
-    await expect(runBatch(config)).rejects.toThrow('Oracle submission not yet wired');
+  it('submits pending rows to the oracle and marks them published', async () => {
+    const executor = makeExecutor([dbRow(SAMPLE_ROW)]);
+    const config = { ...BASE_CONFIG, executor };
+    const result = await runBatch(config);
+    expect(result).toEqual({ submitted: 1, skipped: 0, txHash: 'mock-tx-hash' });
+    expect(executor).toHaveBeenCalledWith(expect.stringContaining('UPDATE'), [
+      'mock-tx-hash',
+      SAMPLE_ROW.intentHash,
+    ]);
   });
 });

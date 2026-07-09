@@ -28,9 +28,18 @@
       Done against the testnet deployment
       (`CCZ54NTEOVL2DKWCGJA5XHTHOGRDS7JHFKYWEC6QH2IMZLYNM3FBFKDG`); mainnet
       wiring still pending item 1 of the uplift plan.
-- [ ] **3. Fix both package tsconfigs** (`module: "Node16"`, exclude `tests`
+- [x] **3. Fix both package tsconfigs** (`module: "Node16"`, exclude `tests`
       from build), verify `npm run build` emits `dist/`, and check
       `npm pack --dry-run` shows the expected files.
+      Both packages now build and pack clean. Along the way: fixed a
+      pre-existing `@types/node` auto-discovery gap (TS 6 stopped
+      finding it in this workspace layout — added explicit `"types":
+      ["node"]`), and worked around `@stellar/stellar-sdk` shipping
+      ESM-only types against `publisher`'s CommonJS build via a
+      dynamic `import()` in `batch.ts`. Also added a local
+      `vitest.config.mts` for `packages/publisher` (it was silently
+      inheriting the root app's config, pointed at a setup file that
+      doesn't exist there) and gitignored `packages/*/dist`.
 - [ ] **4. Add README + LICENSE + `repository` +
       `"publishConfig": {"access": "public"}`** to each package.
 
