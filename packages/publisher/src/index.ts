@@ -1,3 +1,4 @@
+import { Pool } from 'pg';
 import { runBatch, DEFAULT_BATCH_SIZE, type BatchConfig, type QueryExecutor } from './batch';
 import { acquireLock, releaseLock } from './lock';
 
@@ -11,15 +12,6 @@ function requireEnv(key: string): string {
 }
 
 async function buildExecutor(databaseUrl: string): Promise<QueryExecutor> {
-  // pg is a peer/runtime dependency provided by the deployment environment.
-  // Dynamic require keeps it out of declared dependencies so the root lockfile
-  // covers everything and the package stays zero-dep at build time.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { Pool } = require('pg') as {
-    Pool: new (opts: { connectionString: string }) => {
-      query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
-    };
-  };
   const pool = new Pool({ connectionString: databaseUrl });
   return (sql, params) => pool.query(sql, params as unknown[]);
 }
@@ -46,6 +38,7 @@ async function main(): Promise<void> {
         'Public Global Stellar Network ; September 2015',
       publisherSecret: requireEnv('PUBLISHER_SECRET'),
       horizonUrl: process.env['HORIZON_URL'] ?? 'https://horizon.stellar.org',
+      rpcUrl: process.env['SOROBAN_RPC_URL'] ?? 'https://mainnet.sorobanrpc.com',
     };
 
     const result = await runBatch(config);

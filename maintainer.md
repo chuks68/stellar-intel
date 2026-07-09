@@ -1,5 +1,39 @@
 # Maintainer Notes
 
+## TODO — Wave uplift (deadline: next wave entry ≈ 2026-07-23)
+
+### Uplift plan
+
+- [ ] **1. Deploy reputation contract — mainnet.** Run the existing
+      `scripts/deploy-oracle-mainnet.ts` script, record the contract ID in the
+      repo, and wire `submitToOracle` (`packages/publisher/src/batch.ts`) for
+      real: build the Soroban invoke tx, sign with the publisher key, submit.
+      The publisher tick must publish real outcomes on-chain BEFORE entry.
+      This is the categorical D3 move (6 → 8-9).
+- [ ] **2. App reads scores from chain.** Reconcile/verify the leaderboard
+      against contract state and surface on-chain tx hashes in the UI. Closes
+      the oracle loop in both directions — no mock-adjacent gap.
+- [ ] **3. Publish `@stellarintel/mcp` + `@stellarintel/publisher` to npm**
+      with a runnable example wired to the REAL contract ID; make
+      `examples/consumer-contract` invoke the deployed oracle. "Primitive
+      others depend on" = only observed path to S.
+
+### Fix order before publish
+
+- [ ] **1. Wire real tools into `packages/mcp/src/server.ts`** from
+      `lib/mcp/offramp.ts` — with LIVE rates, not routing-table constants.
+- [x] **2. Wire `submitToOracle` to the deployed contract** (blocks on
+      contract deploy — item 1 of the uplift plan). Add `pg` +
+      `@stellar/stellar-sdk` to `packages/publisher` dependencies.
+      Done against the testnet deployment
+      (`CCZ54NTEOVL2DKWCGJA5XHTHOGRDS7JHFKYWEC6QH2IMZLYNM3FBFKDG`); mainnet
+      wiring still pending item 1 of the uplift plan.
+- [ ] **3. Fix both package tsconfigs** (`module: "Node16"`, exclude `tests`
+      from build), verify `npm run build` emits `dist/`, and check
+      `npm pack --dry-run` shows the expected files.
+- [ ] **4. Add README + LICENSE + `repository` +
+      `"publishConfig": {"access": "public"}`** to each package.
+
 ## 11. Anchor Fleet Status
 
 - [x] Monthly recheck complete for the latest survey snapshot.

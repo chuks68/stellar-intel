@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { contract, Keypair } from '@stellar/stellar-sdk';
 
 export type QueryExecutor = (
   sql: string,
@@ -12,6 +13,8 @@ export interface BatchConfig {
   networkPassphrase: string;
   publisherSecret: string;
   horizonUrl: string;
+  /** Soroban RPC endpoint (distinct from the classic Horizon API in `horizonUrl`). */
+  rpcUrl: string;
 }
 
 export const DEFAULT_BATCH_SIZE = 100;
@@ -90,19 +93,50 @@ export function buildOutcomeHash(row: OutcomeRow): string {
   return createHash('sha256').update(payload).digest('hex');
 }
 
+type OracleSubmitClient = contract.Client & {
+  submit_outcome(args: {
+    publisher: string;
+    anchor_id: string;
+    corridor: string;
+    outcome_hash: string;
+    settle_seconds: number;
+    success: boolean;
+  }): Promise<{ signAndSend(): Promise<{ sendTransactionResponse?: { hash?: string } }> }>;
+};
+
 export async function submitToOracle(
   rows: OutcomeRow[],
-  config: Pick<
-    BatchConfig,
-    'oracleContractId' | 'networkPassphrase' | 'publisherSecret' | 'horizonUrl'
-  >
+  config: Pick<BatchConfig, 'oracleContractId' | 'networkPassphrase' | 'publisherSecret' | 'rpcUrl'>
 ): Promise<string> {
-  void rows;
-  void config;
-  throw new Error(
-    `Oracle submission not yet wired (contract: ${config.oracleContractId}). ` +
-      `Pending Wave 2.1 mainnet deployment.`
-  );
+  const publisherKeypair = Keypair.fromSecret(config.publisherSecret);
+  const { signTransaction } = contract.basicNodeSigner(publisherKeypair, config.networkPassphrase);
+
+  const client = (await contract.Client.from({
+    contractId: config.oracleContractId,
+    rpcUrl: config.rpcUrl,
+    networkPassphrase: config.networkPassphrase,
+    publicKey: publisherKeypair.publicKey(),
+    signTransaction,
+  })) as unknown as OracleSubmitClient;
+
+  let txHash: string | null = null;
+  for (const row of rows) {
+    const assembled = await client.submit_outcome({
+      publisher: publisherKeypair.publicKey(),
+      anchor_id: row.anchorId,
+      corridor: row.corridor,
+      outcome_hash: buildOutcomeHash(row),
+      settle_seconds: row.settleSeconds ?? 0,
+      success: row.outcome === 'completed',
+    });
+    const sent = await assembled.signAndSend();
+    txHash = sent.sendTransactionResponse?.hash ?? txHash;
+  }
+
+  if (!txHash) {
+    throw new Error('submitToOracle: no transaction was submitted');
+  }
+  return txHash;
 }
 
 export async function runBatch(config: BatchConfig): Promise<BatchResult> {

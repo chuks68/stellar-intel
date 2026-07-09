@@ -28,16 +28,18 @@ if (!existsSync(deploymentsDir)) {
 
 try {
   console.log('Building contract...');
-  execSync('soroban contract build', { stdio: 'inherit' });
+  execSync('stellar contract build', {
+    stdio: 'inherit',
+    cwd: resolve(process.cwd(), 'contracts', 'reputation'),
+  });
 } catch {
   console.warn(
-    'Warning: soroban contract build failed or not supported by environment. Proceeding to deploy...'
+    'Warning: stellar contract build failed or not supported by environment. Proceeding to deploy...'
   );
 }
 
 const wasmPath =
-  process.env.WASM_PATH ||
-  'contracts/reputation/target/wasm32-unknown-unknown/release/reputation.wasm';
+  process.env.WASM_PATH || 'contracts/reputation/target/wasm32v1-none/release/reputation.wasm';
 const network = process.env.SOROBAN_NETWORK || 'testnet';
 const source =
   process.env.SOROBAN_SOURCE_ACCOUNT ||
@@ -45,7 +47,7 @@ const source =
   process.env.ADMIN_SECRET_KEY ||
   'default';
 
-const deployCmd = `soroban contract deploy --wasm ${wasmPath} --source ${source} --network ${network}`;
+const deployCmd = `stellar contract deploy --wasm ${wasmPath} --source ${source} --network ${network}`;
 console.log(`Executing: ${deployCmd}`);
 
 let output = '';

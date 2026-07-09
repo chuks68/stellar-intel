@@ -10,8 +10,13 @@
     "dev": "tsx src/index.ts",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^16.0.1",
+    "pg": "^8.13.1"
+  },
   "devDependencies": {
     "@types/node": "^26",
+    "@types/pg": "^8.11.10",
     "typescript": "^6",
     "vitest": "^4"
   },
