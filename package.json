@@ -13,6 +13,7 @@
     "start": "next start",
     "lint": "eslint --max-warnings 0",
     "lint:fix": "eslint --fix",
+    "pretypecheck": "npm run build --workspace=@stellarintel/publisher",
     "typecheck": "tsc --noEmit",
     "type-check": "tsc --noEmit",
     "format": "prettier --write \"**/*.{ts,tsx,mjs,json,css,md}\"",
