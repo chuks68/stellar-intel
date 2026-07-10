@@ -1,4 +1,3 @@
-import { StellarToml } from '@stellar/stellar-sdk';
 import type { ResolvedAnchor, Sep1TomlData } from '@/types';
 import { ANCHORS } from './anchors';
 import { getCachedToml, setCachedToml, invalidateCachedToml, clearTomlCache } from './toml-cache';
@@ -175,6 +174,12 @@ export async function resolveAnchor(
     const cached = getCachedToml(cacheKey);
     if (cached) return cached;
   }
+
+  // Dynamic import: @stellar/stellar-sdk ships ESM-flavored types that TS's
+  // Node16 resolution (used by the standalone packages/mcp build) refuses to
+  // `require()`-import statically — see packages/publisher/src/batch.ts for
+  // the same workaround. The package itself is dual CJS/ESM at runtime.
+  const { StellarToml } = await import('@stellar/stellar-sdk');
 
   // Retry transient resolution failures with exponential backoff, bounded by a
   // wall-clock budget so a slow anchor can't stall the caller indefinitely.

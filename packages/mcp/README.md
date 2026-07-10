@@ -9,20 +9,33 @@ and served over stdio.
 
 ## Status
 
-This package is a scaffold: `createServer()` (`src/server.ts`) stands up the
-MCP `Server` and wires the transport, but does not register any tools yet —
-`ListToolsRequestSchema` currently returns an empty list. Wiring the real
-off-ramp routing tools (backed by the same logic as
+`createServer()` (`src/server.ts`) stands up the MCP server and registers two
+tools, both backed directly by
 [`lib/mcp/offramp.ts`](https://github.com/ezedike-evan/stellar-intel/blob/main/lib/mcp/offramp.ts)
-in the main app) is tracked in the repo's `maintainer.md` and not yet done —
-don't depend on any tool being available from this package until that lands.
-
-A separate, already-wired stdio MCP server lives at
+in the main app (imported at build time — see below), so this package and the
+in-repo dev server at
 [`scripts/mcp/server.ts`](https://github.com/ezedike-evan/stellar-intel/blob/main/scripts/mcp)
-in the main app (see
-[`docs/MCP.md`](https://github.com/ezedike-evan/stellar-intel/blob/main/docs/MCP.md));
-this package is the standalone, publishable version of that server and will
-converge with it.
+(see [`docs/MCP.md`](https://github.com/ezedike-evan/stellar-intel/blob/main/docs/MCP.md))
+share the exact same logic:
+
+- `intel.offramp.quote` — live net-received quote for a corridor + amount.
+  The rate is sourced from the routed anchor's own current price (SEP-38
+  firm quote, falling back to SEP-24/SEP-6 fee-adjusted live FX), not a
+  static table — it can return `RATE_UNAVAILABLE` if the anchor can't
+  currently be quoted.
+- `intel.offramp.prepare` — unsigned intent envelope + unsigned Stellar
+  transaction for agent signing.
+
+### Build
+
+This package's `tsc` build reaches across the workspace into the main app's
+`lib/`, `constants/`, and `types/` trees (via `rootDir`/`paths` in
+`tsconfig.json`) so it reuses the same off-ramp logic instead of duplicating
+it, then rewrites the `@/` path aliases to real relative `require()`s with
+[`tsc-alias`](https://www.npmjs.com/package/tsc-alias) so the published
+`dist/` is self-contained and runnable with plain `node` outside this
+monorepo. `main`/`bin` point at `dist/packages/mcp/src/index.js` — the
+mirrored path is a side effect of `rootDir` spanning the repo root.
 
 ## Install
 
