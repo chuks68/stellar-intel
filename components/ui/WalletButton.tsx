@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useWallet } from '@/contexts/WalletContext';
 import { truncatePublicKey } from '@/lib/utils';
 import { STELLAR_EXPERT_URL } from '@/constants';
@@ -138,6 +139,14 @@ export function WalletButton() {
           >
             View on Stellar Expert
           </a>
+          <Link
+            href="/history"
+            role="menuitem"
+            onClick={() => setMenuOpen(false)}
+            className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            Transaction history
+          </Link>
           <button
             type="button"
             role="menuitem"
