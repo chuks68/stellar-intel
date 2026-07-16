@@ -320,6 +320,7 @@ export function StatusTracker({
             href={`${STELLAR_EXPERT_URL}/tx/${stellarTransactionId}`}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label={`View transaction ${stellarTransactionId} on Stellar Expert (opens in new tab)`}
             className="font-mono text-blue-600 hover:underline dark:text-blue-400"
           >
             {stellarTransactionId.slice(0, 16)}…
