@@ -117,6 +117,8 @@ function OfframpContent() {
           </h2>
           <button
             onClick={() => mutate()}
+            aria-label={refreshInflight ? 'Refreshing rates...' : 'Refresh rates'}
+            aria-busy={refreshInflight}
             className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-300"
           >
             <svg
@@ -125,6 +127,7 @@ function OfframpContent() {
               fill="none"
               stroke="currentColor"
               strokeWidth={2}
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
