@@ -1,10 +1,12 @@
 'use client';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { formatCurrency, formatRate } from '@/lib/utils';
+import { nextSortState, sortRates, type SortState } from '@/lib/sort';
 import type { RateComparison, AnchorRate, AnchorRateError } from '@/types';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { QuotePill } from '@/components/ui/QuotePill';
 import { AnchorLogo } from '@/components/ui/AnchorLogo';
+import { SortToggle } from './SortToggle';
 
 interface RateTableProps {
   rates: RateComparison | undefined;
@@ -30,6 +32,7 @@ export function RateTable({
   onRefresh,
 }: RateTableProps) {
   const [expiredAnchorIds, setExpiredAnchorIds] = useState<Set<string>>(new Set());
+  const [sort, setSort] = useState<SortState | null>(null);
 
   const handleExpire = useCallback((anchorId: string) => {
     setExpiredAnchorIds((prev) => {
@@ -38,6 +41,8 @@ export function RateTable({
       return next;
     });
   }, []);
+
+  const sortedRates = useMemo(() => sortRates(rates?.rates ?? [], sort), [rates?.rates, sort]);
 
   if (
     (isLoading || refreshInflight) &&
@@ -74,19 +79,31 @@ export function RateTable({
               scope="col"
               className="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-400"
             >
-              Fee
+              <SortToggle
+                label="Fee"
+                direction={sort?.key === 'fee' ? sort.direction : null}
+                onClick={() => setSort((prev) => nextSortState(prev, 'fee'))}
+              />
             </th>
             <th
               scope="col"
               className="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-400"
             >
-              Rate
+              <SortToggle
+                label="Rate"
+                direction={sort?.key === 'rate' ? sort.direction : null}
+                onClick={() => setSort((prev) => nextSortState(prev, 'rate'))}
+              />
             </th>
             <th
               scope="col"
               className="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-400"
             >
-              You Receive
+              <SortToggle
+                label="You Receive"
+                direction={sort?.key === 'receive' ? sort.direction : null}
+                onClick={() => setSort((prev) => nextSortState(prev, 'receive'))}
+              />
             </th>
             <th
               scope="col"
@@ -150,10 +167,10 @@ export function RateTable({
 
           {!isLoading &&
             !error &&
-            rates?.rates.map((rate) => {
+            sortedRates.map((rate) => {
               const isExpired = expiredAnchorIds.has(rate.anchorId);
               const isUnavailable = rate.source === 'unavailable' || isExpired;
-              const isBest = rate.anchorId === rates.bestRateId && !isUnavailable;
+              const isBest = rate.anchorId === rates?.bestRateId && !isUnavailable;
               const currency = rate.corridorId.split('-')[1]?.toUpperCase() ?? '';
 
               return (

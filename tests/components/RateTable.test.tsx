@@ -162,4 +162,39 @@ describe('RateTable', () => {
     expect(screen.getByText('Indicative (SEP-6)')).toBeInTheDocument();
     expect(screen.getByRole('timer')).toBeInTheDocument();
   });
+
+  it('sorts rows by Fee ascending then descending on repeated clicks, without re-fetching', () => {
+    const feeRates: RateComparison = {
+      corridorId: 'usdc-ngn',
+      bestRateId: 'cowrie',
+      pending: [],
+      rates: [
+        { ...makeRate('cowrie', 154840), fee: 5 },
+        { ...makeRate('flutterwave', 153260), fee: 1 },
+      ],
+    };
+    render(
+      <RateTable rates={feeRates} isLoading={false} error={undefined} onSelectAnchor={vi.fn()} />
+    );
+
+    const anchorNameInRow = (rowIndex: number) =>
+      screen.getAllByRole('row')[rowIndex + 1]?.textContent;
+
+    // Unsorted: original order (Cowrie, Flutterwave)
+    expect(anchorNameInRow(0)).toContain('Cowrie');
+
+    const sortByFee = screen.getByRole('button', { name: /sort by fee/i });
+    fireEvent.click(sortByFee);
+    // Ascending: lowest fee (Flutterwave, fee 1) first
+    expect(anchorNameInRow(0)).toContain('Flutterwave');
+
+    fireEvent.click(sortByFee);
+    // Descending: highest fee (Cowrie, fee 5) first
+    expect(anchorNameInRow(0)).toContain('Cowrie');
+
+    fireEvent.click(sortByFee);
+    // Back to unsorted: original order
+    expect(anchorNameInRow(0)).toContain('Cowrie');
+    expect(anchorNameInRow(1)).toContain('Flutterwave');
+  });
 });
