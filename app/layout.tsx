@@ -6,6 +6,7 @@ import { Footer } from '@/components/layout/Footer';
 import { ThemeProvider } from '@/contexts/theme';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { OfflineBar } from '@/components/layout/OfflineBar';
+import { TestnetBanner } from '@/components/layout/TestnetBanner';
 import { WalletProvider } from '@/contexts/WalletContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { ToastPortal } from '@/components/ui/Toast';
@@ -81,6 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <WalletProvider>
             <ToastProvider>
+              <TestnetBanner />
               <OfflineBar />
               <Header />
               <main id="main-content" className="mx-auto max-w-7xl px-4 py-8">

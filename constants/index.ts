@@ -5,6 +5,7 @@ export type { RegistryStats } from './anchors';
 import { env } from '@/lib/env';
 export const HORIZON_URL = env.NEXT_PUBLIC_HORIZON_URL;
 export const STELLAR_EXPERT_URL = env.NEXT_PUBLIC_STELLAR_EXPERT_URL;
+export const STELLAR_NETWORK = env.NEXT_PUBLIC_STELLAR_NETWORK;
 
 export const USDC_ASSET: StellarAsset = {
   code: 'USDC',
