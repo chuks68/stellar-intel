@@ -193,6 +193,17 @@ describe('StatusTracker', () => {
     expect(screen.queryByText('View transaction history')).not.toBeInTheDocument();
   });
 
+  it('shows an explainer with a time estimate for a non-terminal status', () => {
+    render(<StatusTracker {...BASE_PROPS} status="pending_external" />);
+    expect(screen.getByText(/anchor is processing your bank transfer/i)).toBeInTheDocument();
+    expect(screen.getByText(/usually ~5–30 min/)).toBeInTheDocument();
+  });
+
+  it('does not show a time estimate for a terminal status', () => {
+    render(<StatusTracker {...BASE_PROPS} status="completed" />);
+    expect(screen.queryByText(/usually ~/)).not.toBeInTheDocument();
+  });
+
   it('shows no terminal-error message for a non-error status', () => {
     render(<StatusTracker {...BASE_PROPS} status="completed" />);
     expect(screen.queryByText(/anchor reported an error/i)).not.toBeInTheDocument();

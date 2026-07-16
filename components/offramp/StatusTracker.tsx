@@ -4,7 +4,11 @@ import Link from 'next/link';
 import type { WithdrawStatusValue, Sep24Transaction } from '@/types';
 import { formatDeliveredAmount } from '@/lib/format';
 import { resolveAnchorSupportHref, resolveToml } from '@/lib/stellar/sep1';
-import { terminalErrorMessage } from '@/lib/stellar/status-messages';
+import {
+  terminalErrorMessage,
+  statusExplainer,
+  statusTimeEstimate,
+} from '@/lib/stellar/status-messages';
 import { Timeline } from './Timeline';
 import { STELLAR_EXPERT_URL } from '@/constants';
 import { CopyButton } from '@/components/ui/CopyButton';
@@ -197,6 +201,18 @@ export function StatusTracker({
           {isLoading && !status ? 'Fetching status…' : STATUS_LABELS[status ?? 'incomplete']}
         </span>
       </div>
+
+      {status && statusExplainer(status) && (
+        <p className="-mt-3 mb-4 text-xs text-gray-500 dark:text-gray-400">
+          {statusExplainer(status)}
+          {statusTimeEstimate(status) && (
+            <span className="text-gray-400 dark:text-gray-500">
+              {' '}
+              (usually {statusTimeEstimate(status)})
+            </span>
+          )}
+        </p>
+      )}
 
       {error && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-950/30 dark:text-red-400">
