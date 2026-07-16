@@ -19,14 +19,36 @@ import { StatusTracker } from '@/components/offramp/StatusTracker';
 import { useAnchorRates } from '@/hooks/useAnchorRates';
 import { useWallet } from '@/contexts/WalletContext';
 import { useWithdrawStatus } from '@/hooks/useWithdrawStatus';
+import { VISIBLE_CORRIDORS } from '@/constants/anchors';
 import type { AnchorRate } from '@/types';
+
+const DEFAULT_CORRIDOR_ID = 'usdc-ngn';
+const DEFAULT_AMOUNT = '100';
+const VALID_CORRIDOR_IDS = new Set(VISIBLE_CORRIDORS.map((c) => c.id));
+const POSITIVE_DECIMAL_RE = /^\d*\.?\d{0,7}$/;
+
+function isValidAmountParam(value: string): boolean {
+  const n = Number(value);
+  return POSITIVE_DECIMAL_RE.test(value) && Number.isFinite(n) && n > 0;
+}
 
 function OfframpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [corridorId, setCorridorId] = useState('usdc-ngn');
-  const [amount, setAmount] = useState('100');
+  const initialCorridorParam = searchParams.get('corridor');
+  const initialAmountParam = searchParams.get('amount');
+
+  const [corridorId, setCorridorId] = useState(
+    initialCorridorParam && VALID_CORRIDOR_IDS.has(initialCorridorParam)
+      ? initialCorridorParam
+      : DEFAULT_CORRIDOR_ID
+  );
+  const [amount, setAmount] = useState(
+    initialAmountParam && isValidAmountParam(initialAmountParam)
+      ? initialAmountParam
+      : DEFAULT_AMOUNT
+  );
   const [selectedRate, setSelectedRate] = useState<AnchorRate | null>(null);
 
   const [trackingTransactionId, setTrackingTransactionId] = useState<string | null>(null);
@@ -57,6 +79,20 @@ function OfframpContent() {
     setTrackingNonce(params.nonce);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    // Tracking params (tx/server/nonce) own the URL while a withdrawal is in
+    // flight — don't clobber them with corridor/amount. Reading the raw
+    // `tx` param (rather than the trackingTransactionId state) avoids a race
+    // on first mount, where this effect can otherwise run before the
+    // sibling effect above finishes restoring tracking state.
+    if (trackingTransactionId || searchParams.get('tx')) return;
+    const sp = new URLSearchParams();
+    sp.set('corridor', corridorId);
+    sp.set('amount', amount);
+    router.replace(`?${sp.toString()}`, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [corridorId, amount, trackingTransactionId]);
 
   const handleSelectAnchor = useCallback((rate: AnchorRate) => {
     setSelectedRate(rate);
