@@ -51,6 +51,23 @@ describe('AmountInput', () => {
     render(<AmountInput value="50" onChange={vi.fn()} balance={100} />);
     expect(screen.queryByText('Insufficient balance')).not.toBeInTheDocument();
   });
+
+  it('sets the amount to the floored balance when Max is clicked', () => {
+    const onChange = vi.fn();
+    render(<AmountInput value="10" onChange={onChange} balance={243.567} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Max' }));
+    expect(onChange).toHaveBeenCalledWith('243.56');
+  });
+
+  it('does not render a Max button when there is no balance', () => {
+    render(<AmountInput value="10" onChange={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Max' })).not.toBeInTheDocument();
+  });
+
+  it('does not render a Max button when balance is zero', () => {
+    render(<AmountInput value="10" onChange={vi.fn()} balance={0} />);
+    expect(screen.queryByRole('button', { name: 'Max' })).not.toBeInTheDocument();
+  });
 });
 
 describe('CorridorSelector', () => {

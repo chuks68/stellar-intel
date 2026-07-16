@@ -69,6 +69,12 @@ export function AmountInput({
     onChange(str);
   }
 
+  function handleMaxClick() {
+    if (balance == null) return;
+    const floored = Math.floor(balance * 100) / 100;
+    handleChipClick(floored);
+  }
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const input = e.target.value;
     setRaw(input);
@@ -112,13 +118,25 @@ export function AmountInput({
           aria-describedby={
             error ? 'amount-error' : insufficient ? 'amount-insufficient' : 'amount-hint'
           }
-          className={`w-full rounded-lg border px-3 py-2.5 pr-16 text-sm text-gray-900 focus:outline-none focus:ring-2 disabled:opacity-50 dark:text-white ${
+          className={`w-full rounded-lg border py-2.5 pl-3 text-sm text-gray-900 focus:outline-none focus:ring-2 disabled:opacity-50 dark:text-white ${
+            balance != null && balance > 0 ? 'pr-28' : 'pr-16'
+          } ${
             error || insufficient
               ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-red-500/20 dark:border-red-700 dark:bg-red-950/20'
               : 'border-gray-300 bg-white focus:border-blue-500 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800'
           }`}
         />
-        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-medium text-gray-400">
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center gap-1.5 text-sm font-medium text-gray-400">
+          {balance != null && balance > 0 && (
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={handleMaxClick}
+              className="pointer-events-auto rounded-md border border-gray-300 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600 hover:border-blue-400 hover:text-blue-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:text-blue-400"
+            >
+              Max
+            </button>
+          )}
           USDC
         </span>
       </div>
