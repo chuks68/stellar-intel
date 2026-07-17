@@ -336,8 +336,8 @@ function ExecuteDrawerContent({
   // ─── Bottom-sheet swipe-to-dismiss (mobile only) ────────────────────────────
   // CSS-first: these handlers only feed a translateY offset; app/globals.css
   // owns the snap-back animation and disables the transition mid-drag. The grab
-  // handle is hidden at ≥640px (sm:hidden), so this never fires on the desktop
-  // side-panel layout.
+  // handle is hidden at ≥1024px (lg:hidden), so this never fires on the desktop
+  // centered-modal layout.
   const handleSwipeStart = (event: ReactTouchEvent) => {
     const touch = event.touches[0];
     if (!touch) return;
@@ -395,7 +395,7 @@ function ExecuteDrawerContent({
       {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/40"
+          className="fixed inset-0 z-40 bg-black/40 lg:backdrop-blur-sm"
           onClick={isRunning ? undefined : onClose}
           aria-hidden="true"
         />
@@ -409,13 +409,13 @@ function ExecuteDrawerContent({
         aria-label="Execute off-ramp"
         data-dragging={dragOffset > 0 ? 'true' : undefined}
         style={dragOffset > 0 ? { transform: `translateY(${dragOffset}px)` } : undefined}
-        className={`bottom-sheet fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 dark:bg-gray-900 sm:bottom-auto sm:left-auto sm:right-8 sm:top-1/2 sm:w-96 sm:-translate-y-1/2 sm:rounded-2xl ${
-          isOpen ? 'translate-y-0' : 'translate-y-full sm:translate-y-full'
+        className={`bottom-sheet fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 dark:bg-gray-900 lg:bottom-auto lg:left-1/2 lg:right-auto lg:top-1/2 lg:w-full lg:max-w-[480px] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl ${
+          isOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-full'
         }`}
       >
         {/* Grab handle — swipe down to dismiss. Mobile bottom sheet only. */}
         <div
-          className="bottom-sheet-handle flex justify-center pt-3 sm:hidden"
+          className="bottom-sheet-handle flex justify-center pt-3 lg:hidden"
           onTouchStart={handleSwipeStart}
           onTouchMove={handleSwipeMove}
           onTouchEnd={handleSwipeEnd}
@@ -619,14 +619,16 @@ function ExecuteDrawerErrorFallback({
 }) {
   return (
     <>
-      {isOpen && <div className="fixed inset-0 z-40 bg-black/40" aria-hidden="true" />}
+      {isOpen && (
+        <div className="fixed inset-0 z-40 bg-black/40 lg:backdrop-blur-sm" aria-hidden="true" />
+      )}
 
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Off-ramp error"
-        className={`fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 dark:bg-gray-900 sm:bottom-auto sm:left-auto sm:right-8 sm:top-1/2 sm:w-96 sm:-translate-y-1/2 sm:rounded-2xl ${
-          isOpen ? 'translate-y-0' : 'translate-y-full sm:translate-y-full'
+        className={`fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 dark:bg-gray-900 lg:bottom-auto lg:left-1/2 lg:right-auto lg:top-1/2 lg:w-full lg:max-w-[480px] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl ${
+          isOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-full'
         }`}
       >
         <div className="p-6">

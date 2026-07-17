@@ -46,13 +46,13 @@
 }
 
 /* Mobile bottom sheet -------------------------------------------------------- */
-/* Below the `sm` breakpoint the execute drawer is a bottom sheet with
+/* Below the `lg` breakpoint the execute drawer is a bottom sheet with
    swipe-to-dismiss. JS touch handlers feed a live translateY offset; this CSS
    owns the snap-back animation, the safe-area padding (so content clears the
    iOS home indicator), and disabling the transition while actively dragging so
-   the sheet tracks the finger 1:1. Scoped to phones so the desktop side panel
-   is untouched. */
-@media (max-width: 639px) {
+   the sheet tracks the finger 1:1. Scoped below 1024px so the desktop
+   centered-modal layout is untouched. */
+@media (max-width: 1023px) {
   .bottom-sheet {
     padding-bottom: env(safe-area-inset-bottom);
     transition: transform 0.3s ease;
