@@ -160,6 +160,32 @@ function OfframpContent() {
     rateTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
+  // Keyboard shortcuts: K focuses the corridor selector, R refreshes rates.
+  // Inactive while typing in a form control or while ExecuteDrawer is open.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (selectedRate !== null) return;
+
+      const target = event.target as HTMLElement | null;
+      const isEditable =
+        !!target &&
+        (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable);
+      if (isEditable) return;
+
+      if (event.key === 'k' || event.key === 'K') {
+        event.preventDefault();
+        document.getElementById('corridor-select')?.focus();
+      } else if (event.key === 'r' || event.key === 'R') {
+        event.preventDefault();
+        void mutate();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mutate, selectedRate]);
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <div aria-live="assertive" className="sr-only">
@@ -227,6 +253,12 @@ function OfframpContent() {
               />
             </svg>
             Refresh
+            <kbd
+              aria-hidden="true"
+              className="rounded border border-gray-300 px-1 font-mono text-[10px] font-normal text-gray-400 dark:border-gray-600 dark:text-gray-500"
+            >
+              R
+            </kbd>
           </button>
         </div>
         <ErrorBoundary

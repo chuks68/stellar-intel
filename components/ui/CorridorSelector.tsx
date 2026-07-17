@@ -29,8 +29,11 @@ interface CorridorSelectorProps {
 export function CorridorSelector({ value, onChange }: CorridorSelectorProps) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
         Corridor
+        <kbd className="rounded border border-gray-300 px-1 font-mono text-[10px] font-normal text-gray-400 dark:border-gray-600 dark:text-gray-500">
+          K
+        </kbd>
       </label>
       <select
         id="corridor-select"
