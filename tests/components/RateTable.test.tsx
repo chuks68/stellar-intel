@@ -1,7 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { RateTable } from '@/components/offramp/RateTable';
 import type { RateComparison, AnchorRate } from '@/types';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 const makeRate = (anchorId: string, totalReceived: number): AnchorRate => ({
   anchorId,
@@ -37,6 +41,29 @@ describe('RateTable', () => {
     );
     const buttons = screen.getAllByRole('button', { name: 'Off-ramp' });
     expect(buttons).toHaveLength(2);
+  });
+
+  it('copying the best rate writes a shareable summary to the clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+
+    render(
+      <RateTable rates={mockRates} isLoading={false} error={undefined} onSelectAnchor={vi.fn()} />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    const copied = writeText.mock.calls[0]![0] as string;
+    expect(copied).toContain('Best USDC→NGN rate:');
+    expect(copied).toContain('via Cowrie');
+    expect(copied).toContain('/offramp?corridor=usdc-ngn');
+  });
+
+  it('only the best rate row has a copy button', () => {
+    render(
+      <RateTable rates={mockRates} isLoading={false} error={undefined} onSelectAnchor={vi.fn()} />
+    );
+    expect(screen.getAllByRole('button', { name: 'Copy' })).toHaveLength(1);
   });
 
   it('anchor name links to its scorecard page', () => {

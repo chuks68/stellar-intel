@@ -7,7 +7,10 @@ import type { RateComparison, AnchorRate, AnchorRateError } from '@/types';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { QuotePill } from '@/components/ui/QuotePill';
 import { AnchorLogo } from '@/components/ui/AnchorLogo';
+import { CopyButton } from '@/components/ui/CopyButton';
 import { SortToggle } from './SortToggle';
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://stellar-intel.vercel.app';
 
 interface RateTableProps {
   rates: RateComparison | undefined;
@@ -214,9 +217,16 @@ export function RateTable({
                         {rate.anchorName}
                       </Link>
                       {isBest && (
-                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                          Best Rate
-                        </span>
+                        <>
+                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                            Best Rate
+                          </span>
+                          {rate.totalReceived !== null && (
+                            <CopyButton
+                              text={`Best USDC→${currency} rate: ${formatCurrency(rate.totalReceived, currency)} via ${rate.anchorName}. Checked ${new Date().toLocaleString()} on ${SITE_URL}/offramp?corridor=${rate.corridorId}`}
+                            />
+                          )}
+                        </>
                       )}
                       <QuotePill
                         source={isUnavailable ? 'unavailable' : rate.source}
