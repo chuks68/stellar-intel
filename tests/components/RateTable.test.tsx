@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { RateTable } from '@/components/offramp/RateTable';
 import type { RateComparison, AnchorRate } from '@/types';
 
@@ -44,6 +44,15 @@ describe('RateTable', () => {
       <RateTable rates={mockRates} isLoading={false} error={undefined} onSelectAnchor={vi.fn()} />
     );
     expect(screen.getByRole('link', { name: 'Cowrie' })).toHaveAttribute('href', '/anchors/cowrie');
+  });
+
+  it('announces the best rate via an aria-live region', async () => {
+    render(
+      <RateTable rates={mockRates} isLoading={false} error={undefined} onSelectAnchor={vi.fn()} />
+    );
+    await waitFor(() => {
+      expect(screen.getByText(/Rates updated\. Best rate:.*via Cowrie\./)).toBeInTheDocument();
+    });
   });
 
   it('the best rate row includes the "Best Rate" badge', () => {

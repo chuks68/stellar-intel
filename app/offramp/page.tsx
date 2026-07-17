@@ -135,6 +135,20 @@ function OfframpContent() {
 
   const rateTableRef = useRef<HTMLDivElement>(null);
 
+  const [corridorAnnouncement, setCorridorAnnouncement] = useState('');
+  const isFirstCorridorRenderRef = useRef(true);
+
+  useEffect(() => {
+    if (isFirstCorridorRenderRef.current) {
+      isFirstCorridorRenderRef.current = false;
+      return;
+    }
+    const [source, dest] = corridorId.split('-');
+    setCorridorAnnouncement(
+      `Showing ${source?.toUpperCase() ?? ''} to ${dest?.toUpperCase() ?? ''} rates. Loading...`
+    );
+  }, [corridorId]);
+
   const handleOffRampAnother = useCallback(() => {
     setTrackingTransactionId(null);
     setTrackingTransferServer(null);
@@ -146,6 +160,9 @@ function OfframpContent() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+      <div aria-live="assertive" className="sr-only">
+        {corridorAnnouncement}
+      </div>
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Off-ramp Comparator</h1>

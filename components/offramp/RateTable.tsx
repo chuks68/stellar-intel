@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { formatCurrency, formatRate } from '@/lib/utils';
 import { nextSortState, sortRates, type SortState } from '@/lib/sort';
@@ -45,6 +45,24 @@ export function RateTable({
 
   const sortedRates = useMemo(() => sortRates(rates?.rates ?? [], sort), [rates?.rates, sort]);
 
+  const [announcement, setAnnouncement] = useState('');
+  const lastAnnouncedKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!rates || rates.rates.length === 0) return;
+    const best = rates.rates.find((r) => r.anchorId === rates.bestRateId);
+    if (!best || best.totalReceived == null) return;
+
+    const key = `${best.anchorId}:${best.totalReceived}`;
+    if (lastAnnouncedKeyRef.current === key) return;
+    lastAnnouncedKeyRef.current = key;
+
+    const currency = best.corridorId.split('-')[1]?.toUpperCase() ?? '';
+    setAnnouncement(
+      `Rates updated. Best rate: ${formatCurrency(best.totalReceived, currency)} via ${best.anchorName}.`
+    );
+  }, [rates]);
+
   if (
     (isLoading || refreshInflight) &&
     (!rates || (rates.rates.length === 0 && !rates.pending?.length))
@@ -66,6 +84,9 @@ export function RateTable({
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+      <div aria-live="polite" aria-atomic="false" className="sr-only">
+        {announcement}
+      </div>
       <table className="w-full text-sm">
         <caption className="sr-only">{captionText}</caption>
         <thead>
