@@ -5,6 +5,7 @@ import { initiateWithdraw, getWithdrawTransactionRecord } from '@/lib/stellar/se
 import { getResolvedAnchorById } from '@/lib/stellar/anchors';
 import { buildWithdrawPayment, signAndSubmitPayment } from '@/lib/stellar/horizon';
 import { measureClient } from '@/lib/metrics';
+import { stepTimeEstimate } from '@/lib/stellar/step-estimates';
 import type { AnchorRate, ExecuteDrawerStep } from '@/types';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { KycIframe } from './KycIframe';
@@ -701,6 +702,9 @@ function StepIndicator({ step }: { step: ExecuteDrawerStep }) {
               }
             >
               {STEP_LABELS[s]}
+              {stepTimeEstimate(s) && (
+                <span className="text-gray-400 dark:text-gray-500"> ({stepTimeEstimate(s)})</span>
+              )}
             </span>
           </li>
         );
