@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { RateTable } from '@/components/offramp/RateTable';
 import type { RateComparison, AnchorRate } from '@/types';
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 const makeRate = (anchorId: string, totalReceived: number): AnchorRate => ({
@@ -100,6 +101,48 @@ describe('RateTable', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Hide details' }));
     expect(screen.queryByText('Quote type')).not.toBeInTheDocument();
+  });
+
+  it('shows a "Rate moving" badge when the best rate shifts more than 2%, auto-dismissing after 10s', () => {
+    vi.useFakeTimers();
+    const { rerender } = render(
+      <RateTable rates={mockRates} isLoading={false} error={undefined} onSelectAnchor={vi.fn()} />
+    );
+    expect(screen.queryByText(/Rate moving/)).not.toBeInTheDocument();
+
+    const shifted: RateComparison = {
+      ...mockRates,
+      rates: [makeRate('cowrie', 154840 * 1.05), makeRate('flutterwave', 153260)],
+    };
+    rerender(
+      <RateTable rates={shifted} isLoading={false} error={undefined} onSelectAnchor={vi.fn()} />
+    );
+    expect(screen.getByText('Rate moving ↑')).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(screen.queryByText(/Rate moving/)).not.toBeInTheDocument();
+  });
+
+  it('does not show a "Rate moving" badge for a shift of 2% or less', () => {
+    const { rerender } = render(
+      <RateTable rates={mockRates} isLoading={false} error={undefined} onSelectAnchor={vi.fn()} />
+    );
+
+    const barelyShifted: RateComparison = {
+      ...mockRates,
+      rates: [makeRate('cowrie', 154840 * 1.01), makeRate('flutterwave', 153260)],
+    };
+    rerender(
+      <RateTable
+        rates={barelyShifted}
+        isLoading={false}
+        error={undefined}
+        onSelectAnchor={vi.fn()}
+      />
+    );
+    expect(screen.queryByText(/Rate moving/)).not.toBeInTheDocument();
   });
 
   it('anchor name links to its scorecard page', () => {

@@ -80,6 +80,35 @@ export function RateTable({
     );
   }, [rates]);
 
+  // "Rate moving" badge — flags a >2% shift in the best rate between two
+  // revalidations, auto-dismissing after 10s.
+  const [volatilityDirection, setVolatilityDirection] = useState<'up' | 'down' | null>(null);
+  const prevBestValueRef = useRef<number | null>(null);
+  const volatilityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!rates || rates.rates.length === 0) return;
+    const best = rates.rates.find((r) => r.anchorId === rates.bestRateId);
+    if (!best || best.totalReceived == null) return;
+
+    const prev = prevBestValueRef.current;
+    prevBestValueRef.current = best.totalReceived;
+    if (prev === null || prev <= 0) return;
+
+    const changePct = ((best.totalReceived - prev) / prev) * 100;
+    if (Math.abs(changePct) <= 2) return;
+
+    setVolatilityDirection(changePct > 0 ? 'up' : 'down');
+    if (volatilityTimeoutRef.current) clearTimeout(volatilityTimeoutRef.current);
+    volatilityTimeoutRef.current = setTimeout(() => setVolatilityDirection(null), 10_000);
+  }, [rates]);
+
+  useEffect(() => {
+    return () => {
+      if (volatilityTimeoutRef.current) clearTimeout(volatilityTimeoutRef.current);
+    };
+  }, []);
+
   if (
     (isLoading || refreshInflight) &&
     (!rates || (rates.rates.length === 0 && !rates.pending?.length))
@@ -239,6 +268,17 @@ export function RateTable({
                             {savingsVsWorst !== null && savingsVsWorst > 0 && (
                               <span className="text-xs font-medium text-green-600 dark:text-green-400">
                                 Save {formatCurrency(savingsVsWorst, currency)} vs others
+                              </span>
+                            )}
+                            {volatilityDirection && (
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  volatilityDirection === 'up'
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                                    : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                                }`}
+                              >
+                                Rate moving {volatilityDirection === 'up' ? '↑' : '↓'}
                               </span>
                             )}
                             {rate.totalReceived !== null && (
