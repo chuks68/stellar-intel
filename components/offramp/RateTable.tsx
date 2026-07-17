@@ -1,5 +1,6 @@
 'use client';
 import { useState, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { formatCurrency, formatRate } from '@/lib/utils';
 import { nextSortState, sortRates, type SortState } from '@/lib/sort';
 import type { RateComparison, AnchorRate, AnchorRateError } from '@/types';
@@ -185,9 +186,12 @@ export function RateTable({
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <AnchorLogo anchorId={rate.anchorId} anchorName={rate.anchorName} />
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <Link
+                        href={`/anchors/${rate.anchorId}`}
+                        className="font-medium text-gray-900 hover:underline dark:text-white"
+                      >
                         {rate.anchorName}
-                      </span>
+                      </Link>
                       {isBest && (
                         <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                           Best Rate

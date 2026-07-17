@@ -39,6 +39,13 @@ describe('RateTable', () => {
     expect(buttons).toHaveLength(2);
   });
 
+  it('anchor name links to its scorecard page', () => {
+    render(
+      <RateTable rates={mockRates} isLoading={false} error={undefined} onSelectAnchor={vi.fn()} />
+    );
+    expect(screen.getByRole('link', { name: 'Cowrie' })).toHaveAttribute('href', '/anchors/cowrie');
+  });
+
   it('the best rate row includes the "Best Rate" badge', () => {
     render(
       <RateTable rates={mockRates} isLoading={false} error={undefined} onSelectAnchor={vi.fn()} />
