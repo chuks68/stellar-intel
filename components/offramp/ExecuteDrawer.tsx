@@ -392,14 +392,15 @@ function ExecuteDrawerContent({
 
   return (
     <>
-      {/* Backdrop */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 lg:backdrop-blur-sm"
-          onClick={isRunning ? undefined : onClose}
-          aria-hidden="true"
-        />
-      )}
+      {/* Backdrop — always mounted so opening/closing gets a real opacity
+          transition rather than an abrupt mount/unmount. */}
+      <div
+        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-200 motion-reduce:transition-none ${
+          isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        onClick={isRunning ? undefined : onClose}
+        aria-hidden="true"
+      />
 
       {/* Drawer */}
       <div
@@ -619,9 +620,12 @@ function ExecuteDrawerErrorFallback({
 }) {
   return (
     <>
-      {isOpen && (
-        <div className="fixed inset-0 z-40 bg-black/40 lg:backdrop-blur-sm" aria-hidden="true" />
-      )}
+      <div
+        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-200 motion-reduce:transition-none ${
+          isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        aria-hidden="true"
+      />
 
       <div
         role="dialog"
