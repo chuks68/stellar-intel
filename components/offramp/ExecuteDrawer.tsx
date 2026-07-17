@@ -6,7 +6,7 @@ import { getResolvedAnchorById } from '@/lib/stellar/anchors';
 import { buildWithdrawPayment, signAndSubmitPayment } from '@/lib/stellar/horizon';
 import { measureClient } from '@/lib/metrics';
 import { stepTimeEstimate } from '@/lib/stellar/step-estimates';
-import { classifyExecuteError } from '@/lib/errors/messages';
+import { classifyExecuteError, isRetryableExecuteError } from '@/lib/errors/messages';
 import type { AnchorRate, ExecuteDrawerStep } from '@/types';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { KycIframe } from './KycIframe';
@@ -91,6 +91,7 @@ function ExecuteDrawerContent({
 }: ExecuteDrawerProps) {
   const [step, setStep] = useState<ExecuteDrawerStep>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorIsRetryable, setErrorIsRetryable] = useState(true);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [kycUrl, setKycUrl] = useState<string | null>(null);
   const [kycOrigin, setKycOrigin] = useState<string | null>(null);
@@ -307,6 +308,7 @@ function ExecuteDrawerContent({
       // "switch network" guidance without retrying the sign.
       if (err instanceof NetworkMismatchError) {
         setErrorMsg(err.message);
+        setErrorIsRetryable(false);
         setStep('error');
         return;
       }
@@ -323,6 +325,7 @@ function ExecuteDrawerContent({
       }
 
       setErrorMsg(classifyExecuteError(err));
+      setErrorIsRetryable(isRetryableExecuteError(err));
       setStep('error');
     } finally {
       // Ensure refs are cleaned up even on unexpected throws.
@@ -388,6 +391,11 @@ function ExecuteDrawerContent({
 
   const handleCancelClose = () => {
     setShowConfirmDialog(false);
+  };
+
+  const handleStartOver = () => {
+    setErrorMsg(null);
+    setStep('idle');
   };
 
   return (
@@ -549,10 +557,10 @@ function ExecuteDrawerContent({
               )}
               {step === 'error' && (
                 <button
-                  onClick={handleExecute}
+                  onClick={errorIsRetryable ? handleExecute : handleStartOver}
                   className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
                 >
-                  Try Again
+                  {errorIsRetryable ? 'Retry' : 'Start Over'}
                 </button>
               )}
               {step === 'done' && (

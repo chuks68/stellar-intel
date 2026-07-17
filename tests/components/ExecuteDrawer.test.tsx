@@ -13,11 +13,15 @@ vi.mock('@/lib/stellar/sep10', async () => {
   };
 });
 
-vi.mock('@/lib/stellar/sep24', () => ({
-  initiateWithdraw: vi.fn(),
-  openWithdrawPopup: vi.fn(),
-  getWithdrawTransactionRecord: vi.fn(),
-}));
+vi.mock('@/lib/stellar/sep24', async () => {
+  const actual = await vi.importActual<any>('@/lib/stellar/sep24');
+  return {
+    ...actual,
+    initiateWithdraw: vi.fn(),
+    openWithdrawPopup: vi.fn(),
+    getWithdrawTransactionRecord: vi.fn(),
+  };
+});
 
 vi.mock('@/lib/stellar/sep1', () => ({
   getTransferServer: vi.fn(),
@@ -233,7 +237,7 @@ describe('ExecuteDrawer', () => {
     expect(mockSignAndSubmitPayment).toHaveBeenCalled();
   });
 
-  it('shows the error message and a Try Again button when authentication fails', async () => {
+  it('shows the error message and a Retry button for an unclassified (retryable) failure', async () => {
     mockAuthenticate.mockRejectedValue(new Error('SEP-10 challenge failed'));
 
     render(
@@ -249,7 +253,7 @@ describe('ExecuteDrawer', () => {
     fireEvent.click(screen.getByText('Start Off-ramp'));
 
     await waitFor(() => expect(screen.getByText('SEP-10 challenge failed')).toBeInTheDocument());
-    expect(screen.getByRole('button', { name: 'Try Again' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 
   it('shows dedicated switch-network guidance when Freighter is on the wrong network', async () => {
@@ -274,7 +278,9 @@ describe('ExecuteDrawer', () => {
       ).toBeInTheDocument()
     );
     expect(screen.getByText(/currently set to Testnet/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Try Again' })).toBeInTheDocument();
+    // A network mismatch needs the user to switch Freighter's network first —
+    // retrying the same sign would just fail again, so it's non-retryable.
+    expect(screen.getByRole('button', { name: 'Start Over' })).toBeInTheDocument();
   });
 
   it('shows the error when the user cancels the KYC popup', async () => {

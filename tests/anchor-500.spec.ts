@@ -187,7 +187,7 @@ describe('[#108] anchor returns 500 mid-flow', () => {
       expect(screen.getByText(/Withdraw initiation failed: HTTP 500/)).toBeTruthy()
     );
     expect(screen.getByText(new RegExp(TRANSFER_SERVER.replace(/\./g, '\\.')))).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Try Again' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
   });
 
   it('does not render the KYC iframe when withdraw POST fails with 500', async () => {
@@ -203,7 +203,7 @@ describe('[#108] anchor returns 500 mid-flow', () => {
 
     fireEvent.click(screen.getByText('Start Off-ramp'));
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Try Again' })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy());
 
     expect(screen.queryByRole('dialog', { name: /kyc/i })).toBeNull();
     expect(mockInitiateWithdraw).toHaveBeenCalledOnce();
