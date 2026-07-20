@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import { createReputationStore, type ReputationStore } from '@/lib/reputation/store';
 import type { SqlExecutor } from '@/lib/reputation/postgres';
 import { OutcomeLogRowSchema, toOutcomeLogRow } from '@/lib/reputation/schema';
-import type { OutcomeLogRow } from '@/types/reputation';
+import type { OutcomeLogRow, ProbeLedgerRow } from '@/types/reputation';
 
 // A pg-compatible executor backed by in-memory SQLite, so the Postgres adapter's
 // real SQL ($1 params, ON CONFLICT upsert) is genuinely exercised in tests.
@@ -105,5 +105,71 @@ describe('OutcomeLogRowSchema (#218)', () => {
   it('rejects an unknown outcome and a non-decimal rate', () => {
     expect(OutcomeLogRowSchema.safeParse(row({ outcome: 'bogus' as never })).success).toBe(false);
     expect(OutcomeLogRowSchema.safeParse(row({ quotedRate: 'NaN' })).success).toBe(false);
+  });
+});
+
+function probeRow(over: Partial<ProbeLedgerRow> = {}): ProbeLedgerRow {
+  return {
+    domain: 'stellar.moneygram.com',
+    reachable: true,
+    latencyMs: 120,
+    failureType: null,
+    error: null,
+    probedAt: '2026-07-20T10:00:00.000Z',
+    ...over,
+  };
+}
+
+describe.each(backends)('Probe ledger — %s backend', (_name, make) => {
+  let store: ReputationStore;
+  afterEach(async () => {
+    await store?.close();
+  });
+
+  it('records and queries probe samples by domain', async () => {
+    store = make();
+    await store.recordProbeSample(probeRow({ domain: 'a.example', reachable: true }));
+    await store.recordProbeSample(
+      probeRow({ domain: 'b.example', reachable: false, latencyMs: 0 })
+    );
+
+    const all = await store.queryProbeSamples();
+    expect(all).toHaveLength(2);
+
+    const aOnly = await store.queryProbeSamples('a.example');
+    expect(aOnly).toHaveLength(1);
+    expect(aOnly[0]?.reachable).toBe(true);
+  });
+
+  it('returns probe samples sorted oldest first', async () => {
+    store = make();
+    await store.recordProbeSample(
+      probeRow({ domain: 'x.example', probedAt: '2026-07-20T12:00:00.000Z' })
+    );
+    await store.recordProbeSample(
+      probeRow({ domain: 'x.example', probedAt: '2026-07-20T10:00:00.000Z' })
+    );
+
+    const samples = await store.queryProbeSamples('x.example');
+    expect(samples[0]?.probedAt).toBe('2026-07-20T10:00:00.000Z');
+    expect(samples[1]?.probedAt).toBe('2026-07-20T12:00:00.000Z');
+  });
+
+  it('stores failure type and error metadata', async () => {
+    store = make();
+    await store.recordProbeSample(
+      probeRow({
+        domain: 'down.example',
+        reachable: false,
+        failureType: 'dns',
+        error: 'ENOTFOUND',
+        latencyMs: 0,
+      })
+    );
+
+    const samples = await store.queryProbeSamples('down.example');
+    expect(samples[0]?.failureType).toBe('dns');
+    expect(samples[0]?.error).toBe('ENOTFOUND');
+    expect(samples[0]?.reachable).toBe(false);
   });
 });

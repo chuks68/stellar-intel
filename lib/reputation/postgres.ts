@@ -1,4 +1,4 @@
-import type { OutcomeLogRow, OutcomeStatus } from '@/types/reputation';
+import type { OutcomeLogRow, OutcomeStatus, ProbeLedgerRow } from '@/types/reputation';
 import type { DeliveredUpdate, DisputedUpdate, OutcomeQuery, ReputationStore } from './store';
 
 // ─── Postgres backend (Issue #128 / #219) — production ─────────────────────────
@@ -33,6 +33,16 @@ const CREATE_TABLE_SQL = `
     published_at           TIMESTAMPTZ,
     oracle_tx_hash         TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS probe_samples (
+    domain        TEXT NOT NULL,
+    reachable     BOOLEAN NOT NULL,
+    latency_ms    DOUBLE PRECISION NOT NULL,
+    failure_type  TEXT,
+    error         TEXT,
+    probed_at     TIMESTAMPTZ NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_probe_samples_domain ON probe_samples (domain);
 `;
 
 function fromDb(r: Record<string, unknown>): OutcomeLogRow {
@@ -59,13 +69,33 @@ function fromDb(r: Record<string, unknown>): OutcomeLogRow {
   };
 }
 
+function fromProbeDb(r: Record<string, unknown>): ProbeLedgerRow {
+  const asString = (v: unknown): string | null => (v == null ? null : String(v));
+  return {
+    domain: String(r['domain']),
+    reachable: Boolean(r['reachable']),
+    latencyMs: Number(r['latency_ms']),
+    failureType: (r['failure_type'] as ProbeLedgerRow['failureType']) ?? null,
+    error: asString(r['error']),
+    probedAt: new Date(r['probed_at'] as string).toISOString(),
+  };
+}
+
 export class PostgresReputationStore implements ReputationStore {
   private ready: Promise<void> | null = null;
 
   constructor(private readonly sql: SqlExecutor) {}
 
   private init(): Promise<void> {
-    if (!this.ready) this.ready = this.sql.query(CREATE_TABLE_SQL).then(() => undefined);
+    if (!this.ready) {
+      const statements = CREATE_TABLE_SQL.split(';')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      this.ready = statements.reduce<Promise<void>>(
+        (chain, stmt) => chain.then(() => this.sql.query(stmt + ';').then(() => undefined)),
+        Promise.resolve()
+      );
+    }
     return this.ready;
   }
 
@@ -149,6 +179,28 @@ export class PostgresReputationStore implements ReputationStore {
        WHERE intent_hash = $1`,
       [intentHash, update.disputed ? 1 : 0, update.disputedReason]
     );
+  }
+
+  async recordProbeSample(row: ProbeLedgerRow): Promise<void> {
+    await this.init();
+    await this.sql.query(
+      `INSERT INTO probe_samples (domain, reachable, latency_ms, failure_type, error, probed_at)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [row.domain, row.reachable ? 1 : 0, row.latencyMs, row.failureType, row.error, row.probedAt]
+    );
+  }
+
+  async queryProbeSamples(domain?: string): Promise<ProbeLedgerRow[]> {
+    await this.init();
+    if (domain) {
+      const { rows } = await this.sql.query(
+        'SELECT * FROM probe_samples WHERE domain = $1 ORDER BY probed_at ASC',
+        [domain]
+      );
+      return rows.map(fromProbeDb);
+    }
+    const { rows } = await this.sql.query('SELECT * FROM probe_samples ORDER BY probed_at ASC');
+    return rows.map(fromProbeDb);
   }
 
   async close(): Promise<void> {

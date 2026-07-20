@@ -37,3 +37,28 @@ export interface OutcomeLogRow {
   /** Tx hash of the `submit_outcome` call that published this row on-chain; null until published. */
   oracleTxHash: string | null;
 }
+
+// ─── Uptime probe ledger (Issue #D002) ────────────────────────────────────────
+//
+// Probe samples recorded into the health ledger. Each row captures one
+// SEP-1 stellar.toml reachability check for an anchor, including a
+// classified failure type so the dashboard can distinguish DNS/TLS issues
+// from plain HTTP errors or timeouts.
+
+export const PROBE_FAILURE_TYPES = ['dns', 'tls', 'http', 'timeout', 'unknown'] as const;
+export type ProbeFailureType = (typeof PROBE_FAILURE_TYPES)[number];
+
+export interface ProbeLedgerRow {
+  /** Anchor home domain that was probed. */
+  domain: string;
+  /** True when stellar.toml resolved and returned HTTP 2xx. */
+  reachable: boolean;
+  /** Round-trip time in milliseconds (0 when unreachable). */
+  latencyMs: number;
+  /** Classified failure reason; null when reachable. */
+  failureType: ProbeFailureType | null;
+  /** Raw error message; null when reachable. */
+  error: string | null;
+  /** ISO 8601 timestamp of the probe. */
+  probedAt: string;
+}

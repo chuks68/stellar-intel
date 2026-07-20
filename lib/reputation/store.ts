@@ -1,4 +1,4 @@
-import type { OutcomeLogRow } from '@/types/reputation';
+import type { OutcomeLogRow, ProbeLedgerRow } from '@/types/reputation';
 import { SqliteReputationStore } from './sqlite';
 import { PostgresReputationStore, type SqlExecutor } from './postgres';
 
@@ -34,6 +34,10 @@ export interface ReputationStore {
   markDelivered(intentHash: string, update: DeliveredUpdate): Promise<void>;
   /** Sets or clears the disputed flag on a row (used by the dispute API, #164/#165). */
   markDisputed(intentHash: string, update: DisputedUpdate): Promise<void>;
+  /** Record a probe sample into the uptime health ledger (#D002). */
+  recordProbeSample(row: ProbeLedgerRow): Promise<void>;
+  /** Query probe samples, optionally filtered to a single domain, oldest first. */
+  queryProbeSamples(domain?: string): Promise<ProbeLedgerRow[]>;
   close(): Promise<void>;
 }
 
@@ -50,6 +54,7 @@ function matches(row: OutcomeLogRow, filter: OutcomeQuery): boolean {
 /** In-memory backend — the default for tests and a fallback when no driver is set. */
 export class InMemoryReputationStore implements ReputationStore {
   private readonly rows = new Map<string, OutcomeLogRow>();
+  private readonly probeSamples: ProbeLedgerRow[] = [];
 
   async append(row: OutcomeLogRow): Promise<void> {
     this.rows.set(row.intentHash, { ...row });
@@ -77,8 +82,18 @@ export class InMemoryReputationStore implements ReputationStore {
     row.disputedReason = update.disputedReason;
   }
 
+  async recordProbeSample(row: ProbeLedgerRow): Promise<void> {
+    this.probeSamples.push({ ...row });
+  }
+
+  async queryProbeSamples(domain?: string): Promise<ProbeLedgerRow[]> {
+    const rows = domain ? this.probeSamples.filter((r) => r.domain === domain) : this.probeSamples;
+    return rows.map((r) => ({ ...r })).sort((a, b) => a.probedAt.localeCompare(b.probedAt));
+  }
+
   async close(): Promise<void> {
     this.rows.clear();
+    this.probeSamples.length = 0;
   }
 }
 

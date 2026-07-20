@@ -5,6 +5,7 @@ import {
   runProbe,
   reachabilityScore,
   averageLatencyMs,
+  classifyFailure,
   type TomlProbeResult,
 } from '@/lib/reputation/probe';
 
@@ -114,5 +115,51 @@ describe('reputation probe', () => {
     const store = new InMemoryProbeStore();
     expect(reachabilityScore('unknown.example', store)).toBeNull();
     expect(averageLatencyMs('unknown.example', store)).toBeNull();
+  });
+
+  it('classifies DNS failures', () => {
+    expect(classifyFailure('getaddrinfo ENOTFOUND example.com')).toBe('dns');
+    expect(classifyFailure('ENOTINFO lookup failed')).toBe('dns');
+    expect(classifyFailure('EAI_AGAIN temporary failure')).toBe('dns');
+  });
+
+  it('classifies TLS failures', () => {
+    expect(classifyFailure('UNABLE_TO_VERIFY_LEAF_SIGNATURE')).toBe('tls');
+    expect(classifyFailure('self signed certificate in chain')).toBe('tls');
+    expect(classifyFailure('ERR_SSL_TLSV1_ALERT_PROTOCOL_VERSION')).toBe('tls');
+  });
+
+  it('classifies timeout failures', () => {
+    expect(classifyFailure('The operation was aborted')).toBe('timeout');
+    expect(classifyFailure('connect ETIMEDOUT 1.2.3.4:443')).toBe('timeout');
+    expect(classifyFailure('request timeout after 5000ms')).toBe('timeout');
+  });
+
+  it('classifies HTTP failures', () => {
+    expect(classifyFailure('HTTP 521 origin down')).toBe('http');
+    expect(classifyFailure('request failed with status 500')).toBe('http');
+  });
+
+  it('classifies unknown failures', () => {
+    expect(classifyFailure('something weird happened')).toBe('unknown');
+  });
+
+  it('records failureType on unreachable samples', async () => {
+    const store = new InMemoryProbeStore();
+    const dnsFail = async (): Promise<TomlProbeResult> => {
+      throw new Error('getaddrinfo ENOTFOUND example.com');
+    };
+    const sample = await probeAnchor('dns-fail.example', store, { fetchToml: dnsFail });
+
+    expect(sample.reachable).toBe(false);
+    expect(sample.failureType).toBe('dns');
+  });
+
+  it('records null failureType on reachable samples', async () => {
+    const store = new InMemoryProbeStore();
+    const sample = await probeAnchor('up.example', store, { fetchToml: ok });
+
+    expect(sample.reachable).toBe(true);
+    expect(sample.failureType).toBeNull();
   });
 });

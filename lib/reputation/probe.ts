@@ -13,6 +13,8 @@
 
 import { getLogger } from '@/lib/logger';
 import { resolveToml } from '@/lib/stellar/sep1';
+import { ANCHORS } from '@/constants/anchors';
+import type { ProbeFailureType } from '@/types/reputation';
 
 const logger = getLogger('reputation/probe');
 
@@ -26,6 +28,8 @@ export interface ProbeSample {
   latencyMs: number;
   /** Epoch milliseconds when the sample was taken. */
   at: number;
+  /** Classified failure reason; null when reachable. */
+  failureType?: ProbeFailureType | null;
   /** Failure reason when `reachable` is false. */
   error?: string;
 }
@@ -78,6 +82,37 @@ function resolveDeps(deps?: ProbeDeps): Required<ProbeDeps> {
 }
 
 /**
+ * Classify a probe failure into a bucket: dns, tls, http, timeout, or unknown.
+ * DNS failures surface as ENOTFOUND / ENOTINFO / EAI_AGAIN; TLS as
+ * UNABLE_TO_VERIFY / CERT / SSL; timeout as AbortError or ETIMEDOUT; everything
+ * else is treated as an HTTP-level failure when the message contains an HTTP
+ * status code, or falls back to "unknown".
+ */
+export function classifyFailure(error: string): ProbeFailureType {
+  const lower = error.toLowerCase();
+
+  if (lower.includes('enotfound') || lower.includes('enotinfo') || lower.includes('eai_again')) {
+    return 'dns';
+  }
+  if (
+    lower.includes('unable_to_verify') ||
+    lower.includes('cert') ||
+    lower.includes('ssl') ||
+    lower.includes('tls') ||
+    lower.includes('err_cert')
+  ) {
+    return 'tls';
+  }
+  if (lower.includes('abort') || lower.includes('etimedout') || lower.includes('timeout')) {
+    return 'timeout';
+  }
+  if (/http\s*\d{3}/.test(lower) || lower.includes('status')) {
+    return 'http';
+  }
+  return 'unknown';
+}
+
+/**
  * Probe a single anchor: time its TOML fetch, record one sample, return it.
  * Network/transport failures are caught and recorded as unreachable rather than
  * thrown, so one dead anchor never aborts a fleet run.
@@ -92,14 +127,19 @@ export async function probeAnchor(
 
   let reachable = false;
   let error: string | undefined;
+  let failureType: ProbeFailureType | null = null;
   try {
     const result = await fetchToml(domain);
     reachable = result.ok;
-    if (!result.ok) error = result.error ?? 'unreachable';
+    if (!result.ok) {
+      error = result.error ?? 'unreachable';
+      failureType = classifyFailure(error);
+    }
   } catch (err) {
     reachable = false;
     error = err instanceof Error ? err.message : String(err);
-    logger.warn({ event: 'probe.error', domain, error }, 'probe caught an exception');
+    failureType = classifyFailure(error);
+    logger.warn({ event: 'probe.error', domain, error, failureType }, 'probe caught an exception');
   }
 
   const end = now();
@@ -108,10 +148,18 @@ export async function probeAnchor(
     reachable,
     latencyMs: Math.max(0, end - start),
     at: end,
+    failureType,
     ...(error !== undefined ? { error } : {}),
   };
   logger.info(
-    { event: 'probe.sample', domain, reachable, latencyMs: sample.latencyMs, error },
+    {
+      event: 'probe.sample',
+      domain,
+      reachable,
+      latencyMs: sample.latencyMs,
+      failureType,
+      error,
+    },
     'probe sample recorded'
   );
   store.record(sample);
@@ -165,4 +213,30 @@ export function averageLatencyMs(domain: string, store: ProbeSampleStore): numbe
   if (reachable.length === 0) return null;
   const total = reachable.reduce((sum, r) => sum + r.latencyMs, 0);
   return total / reachable.length;
+}
+
+/**
+ * Probe every registered anchor from `constants/anchors.ts` once. Uses each
+ * anchor's `serviceDomain` when available, falling back to `homeDomain`.
+ * Returns the samples keyed by anchor id.
+ */
+export async function probeAllAnchors(
+  store: ProbeSampleStore,
+  deps?: ProbeDeps
+): Promise<Map<string, ProbeSample>> {
+  const domains = ANCHORS.map((a) => a.serviceDomain ?? a.homeDomain);
+  logger.info(
+    { event: 'probe.all.start', anchorCount: ANCHORS.length },
+    'probing all registered anchors'
+  );
+  const samples = await runProbe(domains, store, deps);
+  const byAnchor = new Map<string, ProbeSample>();
+  for (let i = 0; i < ANCHORS.length; i++) {
+    const anchor = ANCHORS[i];
+    const sample = samples[i];
+    if (anchor && sample) {
+      byAnchor.set(anchor.id, sample);
+    }
+  }
+  return byAnchor;
 }

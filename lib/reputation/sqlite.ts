@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import type { OutcomeLogRow, OutcomeStatus } from '@/types/reputation';
+import type { OutcomeLogRow, OutcomeStatus, ProbeLedgerRow } from '@/types/reputation';
 import type { DeliveredUpdate, DisputedUpdate, OutcomeQuery, ReputationStore } from './store';
 
 // ─── SQLite backend (Issue #128 / #219) — local/dev ────────────────────────────
@@ -26,6 +26,16 @@ const CREATE_TABLE_SQL = `
     oracleTxHash         TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_outcome_log_anchor ON outcome_log (anchorId);
+
+  CREATE TABLE IF NOT EXISTS probe_samples (
+    domain       TEXT    NOT NULL,
+    reachable    INTEGER NOT NULL,
+    latencyMs    REAL    NOT NULL,
+    failureType  TEXT,
+    error        TEXT,
+    probedAt     TEXT    NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_probe_samples_domain ON probe_samples (domain);
 `;
 
 interface OutcomeLogRowDb {
@@ -53,6 +63,17 @@ function fromDb(r: OutcomeLogRowDb): OutcomeLogRow {
     outcome: r.outcome as OutcomeStatus,
     disputed: r.disputed !== 0,
     disputedReason: r.disputed_reason,
+  };
+}
+
+function fromProbeDb(r: Record<string, unknown>): ProbeLedgerRow {
+  return {
+    domain: String(r['domain']),
+    reachable: Boolean(r['reachable']),
+    latencyMs: Number(r['latencyMs']),
+    failureType: (r['failureType'] as ProbeLedgerRow['failureType']) ?? null,
+    error: (r['error'] as string) ?? null,
+    probedAt: String(r['probedAt']),
   };
 }
 
@@ -127,6 +148,30 @@ export class SqliteReputationStore implements ReputationStore {
         disputedReason: update.disputedReason,
         intentHash,
       });
+  }
+
+  async recordProbeSample(row: ProbeLedgerRow): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO probe_samples (domain, reachable, latencyMs, failureType, error, probedAt)
+         VALUES (@domain, @reachable, @latencyMs, @failureType, @error, @probedAt)`
+      )
+      .run({ ...row, reachable: row.reachable ? 1 : 0 });
+  }
+
+  async queryProbeSamples(domain?: string): Promise<ProbeLedgerRow[]> {
+    if (domain) {
+      return (
+        this.db
+          .prepare('SELECT * FROM probe_samples WHERE domain = ? ORDER BY probedAt ASC')
+          .all(domain) as Array<Record<string, unknown>>
+      ).map(fromProbeDb);
+    }
+    return (
+      this.db.prepare('SELECT * FROM probe_samples ORDER BY probedAt ASC').all() as Array<
+        Record<string, unknown>
+      >
+    ).map(fromProbeDb);
   }
 
   async close(): Promise<void> {
