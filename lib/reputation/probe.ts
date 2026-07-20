@@ -15,6 +15,7 @@ import { getLogger } from '@/lib/logger';
 import { resolveToml } from '@/lib/stellar/sep1';
 import { getCorridorById } from '@/lib/stellar/anchors';
 import { assertSep38Capable, getSep38Price } from '@/lib/stellar/sep38';
+import { DRIFT_THRESHOLD_PERCENT, isDrifted } from './thresholds';
 import { ANCHORS } from '@/constants/anchors';
 import type { ProbeFailureType } from '@/types/reputation';
 import type { Anchor } from '@/types';
@@ -246,6 +247,215 @@ export async function probeAllAnchors(
   return byAnchor;
 }
 
+// ─── Quote-drift probe (Issue #D006) ───────────────────────────────────────────
+//
+// Compares each anchor's quoted rate, for a fixed reference corridor/amount,
+// against the cross-anchor median. An anchor whose rate deviates beyond a
+// configurable threshold (default 3%, see `lib/reputation/thresholds.ts`) is
+// flagged — a stale cache or a manipulated quote both show up as drift — but
+// never auto-excluded; that decision is left to a human or a later policy.
+
+/** One anchor's indicative rate for the reference corridor/amount. */
+export interface AnchorQuote {
+  anchorId: string;
+  /** Indicative rate (buy amount per unit sold), from SEP-38 GET /price. */
+  rate: number;
+}
+
+/** One anchor's quote compared against the cross-anchor median. */
+export interface DriftSample {
+  anchorId: string;
+  corridor: string;
+  rate: number;
+  medianRate: number;
+  /** Signed percentage deviation from the median; positive means above median. */
+  deviationPercent: number;
+  /** True when `|deviationPercent|` exceeds the configured drift threshold. */
+  flagged: boolean;
+  /** Epoch milliseconds when the comparison was made. */
+  at: number;
+}
+
+/** Persistence sink for drift samples — mirrors `ProbeSampleStore`. */
+export interface DriftSampleStore {
+  /** Append one sample. */
+  record(sample: DriftSample): void;
+  /** All samples, optionally filtered to a single anchor, oldest first. */
+  samples(anchorId?: string): DriftSample[];
+}
+
+/** In-memory drift sample store — the default sink, and the one used in tests. */
+export class InMemoryDriftStore implements DriftSampleStore {
+  private readonly rows: DriftSample[] = [];
+
+  record(sample: DriftSample): void {
+    this.rows.push({ ...sample });
+  }
+
+  samples(anchorId?: string): DriftSample[] {
+    const rows = anchorId ? this.rows.filter((r) => r.anchorId === anchorId) : this.rows;
+    return rows.map((r) => ({ ...r })).sort((a, b) => a.at - b.at);
+  }
+}
+
+/** Median of a numeric array (average of the two middle values for even-length input). */
+function median(values: readonly number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
+}
+
+/**
+ * Compares each anchor's quoted rate against the cross-anchor median for the
+ * same corridor and flags anchors that deviate beyond `thresholdPercent`.
+ * Pure and network-free, so the acceptance-criteria fixture ("a quote 10%
+ * off-median is flagged") can be verified without a probe cycle.
+ */
+export function detectQuoteDrift(
+  quotes: readonly AnchorQuote[],
+  corridorId: string,
+  thresholdPercent: number = DRIFT_THRESHOLD_PERCENT,
+  now: () => number = Date.now
+): DriftSample[] {
+  const medianRate = median(quotes.map((q) => q.rate));
+  const at = now();
+  return quotes.map((q) => {
+    const deviationPercent = medianRate !== 0 ? ((q.rate - medianRate) / medianRate) * 100 : 0;
+    return {
+      anchorId: q.anchorId,
+      corridor: corridorId,
+      rate: q.rate,
+      medianRate,
+      deviationPercent,
+      flagged: isDrifted(deviationPercent, thresholdPercent),
+      at,
+    };
+  });
+}
+
+/** The minimal outcome of a reference-rate fetch the drift probe depends on. */
+export interface RateProbeResult {
+  ok: boolean;
+  rate?: number;
+  error?: string;
+}
+
+/** Injectable dependencies for the quote-drift probe. */
+export interface QuoteDriftDeps {
+  /** Fetches an anchor's indicative rate for the reference corridor/amount. Defaults to a real GET /price call. */
+  fetchRate?: (anchor: Anchor, corridorId: string, amount: string) => Promise<RateProbeResult>;
+  /** Monotonic-ish millisecond clock. Defaults to `Date.now`. */
+  now?: () => number;
+}
+
+async function defaultFetchRate(
+  anchor: Anchor,
+  corridorId: string,
+  amount: string
+): Promise<RateProbeResult> {
+  const domain = anchor.serviceDomain ?? anchor.homeDomain;
+  const tomlResult = await resolveToml(domain);
+  if (!tomlResult.ok) {
+    return { ok: false, error: tomlResult.error };
+  }
+
+  let quoteServer: string;
+  try {
+    quoteServer = assertSep38Capable(tomlResult.data);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  const corridor = getCorridorById(corridorId);
+  try {
+    const price = await getSep38Price({
+      quoteServer,
+      sell_asset: `stellar:${anchor.assetCode}:${anchor.assetIssuer}`,
+      buy_asset: `iso4217:${corridor.to}`,
+      sell_amount: amount,
+      context: 'sep31',
+    });
+    const rateValue = price.total_price ?? price.price;
+    const rate = Number(rateValue);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      return { ok: false, error: `invalid rate in SEP-38 /price response: "${rateValue}"` };
+    }
+    return { ok: true, rate };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+function resolveDriftDeps(deps?: QuoteDriftDeps): Required<QuoteDriftDeps> {
+  return {
+    fetchRate: deps?.fetchRate ?? defaultFetchRate,
+    now: deps?.now ?? Date.now,
+  };
+}
+
+/**
+ * Runs one quote-drift probe cycle: fetches every anchor's indicative rate for
+ * a fixed reference corridor/amount, computes the cross-anchor median, and
+ * flags anchors whose rate deviates beyond the configured threshold. Anchors
+ * that fail to quote are skipped from the comparison (that's a reachability
+ * concern for the uptime probe, not a drift signal) and are never recorded.
+ */
+export async function probeQuoteDrift(
+  anchors: readonly Anchor[],
+  corridorId: string,
+  amount: string,
+  store: DriftSampleStore,
+  deps?: QuoteDriftDeps,
+  thresholdPercent: number = DRIFT_THRESHOLD_PERCENT
+): Promise<DriftSample[]> {
+  const { fetchRate, now } = resolveDriftDeps(deps);
+  logger.info(
+    { event: 'probe.drift.start', anchorCount: anchors.length, corridor: corridorId, amount },
+    'starting quote-drift probe run'
+  );
+
+  const results = await Promise.all(
+    anchors.map(async (anchor) => ({ anchor, result: await fetchRate(anchor, corridorId, amount) }))
+  );
+
+  const quotes: AnchorQuote[] = [];
+  let skipped = 0;
+  for (const { anchor, result } of results) {
+    if (result.ok && result.rate !== undefined) {
+      quotes.push({ anchorId: anchor.id, rate: result.rate });
+    } else {
+      skipped++;
+      logger.warn(
+        {
+          event: 'probe.drift.skip',
+          anchorId: anchor.id,
+          corridor: corridorId,
+          error: result.error,
+        },
+        'anchor skipped from drift comparison (unreachable)'
+      );
+    }
+  }
+
+  const samples = detectQuoteDrift(quotes, corridorId, thresholdPercent, now);
+  for (const sample of samples) {
+    store.record(sample);
+  }
+
+  logger.info(
+    {
+      event: 'probe.drift.complete',
+      corridor: corridorId,
+      compared: samples.length,
+      skipped,
+      flagged: samples.filter((s) => s.flagged).length,
+    },
+    'quote-drift probe run complete'
+  );
+
+  return samples;
+}
+
 // ─── Quote-latency probe (Issue #D005) ─────────────────────────────────────────
 //
 // Times the SEP-38 quote round-trip per anchor per corridor, independent of the
@@ -421,3 +631,4 @@ export function quoteLatencyPercentiles(
   };
   return { p50Ms: rank(50), p95Ms: rank(95), sampleCount: windowed.length };
 }
+

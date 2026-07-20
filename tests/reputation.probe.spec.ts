@@ -6,10 +6,15 @@ import {
   reachabilityScore,
   averageLatencyMs,
   classifyFailure,
+  InMemoryDriftStore,
+  detectQuoteDrift,
+  probeQuoteDrift,
   probeQuoteLatency,
   probeAllAnchorQuotes,
   quoteLatencyPercentiles,
   type TomlProbeResult,
+  type AnchorQuote,
+  type RateProbeResult,
   type QuoteProbeResult,
 } from '@/lib/reputation/probe';
 import type { Anchor } from '@/types';
@@ -181,6 +186,117 @@ function testAnchor(over: Partial<Anchor> = {}): Anchor {
     ...over,
   };
 }
+
+describe('quote-drift probe', () => {
+  it('flags a fixture anchor quoting 10% off-median; others within threshold are not', () => {
+    const quotes: AnchorQuote[] = [
+      { anchorId: 'a', rate: 1500 },
+      { anchorId: 'b', rate: 1500 },
+      { anchorId: 'c', rate: 1500 },
+      { anchorId: 'drifted', rate: 1650 }, // 10% above median
+    ];
+
+    const samples = detectQuoteDrift(quotes, 'usdc-ngn');
+    const drifted = samples.find((s) => s.anchorId === 'drifted')!;
+    const notDrifted = samples.filter((s) => s.anchorId !== 'drifted');
+
+    expect(drifted.flagged).toBe(true);
+    expect(drifted.deviationPercent).toBeCloseTo(10, 5);
+    expect(drifted.medianRate).toBe(1500);
+    for (const sample of notDrifted) {
+      expect(sample.flagged).toBe(false);
+      expect(sample.deviationPercent).toBeCloseTo(0, 5);
+    }
+  });
+
+  it('does not flag a quote within the configured threshold', () => {
+    const quotes: AnchorQuote[] = [
+      { anchorId: 'a', rate: 1000 },
+      { anchorId: 'b', rate: 1000 },
+      { anchorId: 'close', rate: 1020 }, // 2% above median, default threshold is 3%
+    ];
+
+    const samples = detectQuoteDrift(quotes, 'usdc-ngn');
+    const close = samples.find((s) => s.anchorId === 'close')!;
+
+    expect(close.flagged).toBe(false);
+    expect(close.deviationPercent).toBeCloseTo(2, 5);
+  });
+
+  it('honors a custom threshold', () => {
+    const quotes: AnchorQuote[] = [
+      { anchorId: 'a', rate: 100 },
+      { anchorId: 'b', rate: 100 },
+      { anchorId: 'c', rate: 104 }, // 4% above median
+    ];
+
+    expect(detectQuoteDrift(quotes, 'usdc-ngn', 5).find((s) => s.anchorId === 'c')!.flagged).toBe(
+      false
+    );
+    expect(detectQuoteDrift(quotes, 'usdc-ngn', 3).find((s) => s.anchorId === 'c')!.flagged).toBe(
+      true
+    );
+  });
+
+  it('flags a quote below the median the same as one above it', () => {
+    const quotes: AnchorQuote[] = [
+      { anchorId: 'a', rate: 1000 },
+      { anchorId: 'b', rate: 1000 },
+      { anchorId: 'low', rate: 850 }, // 15% below median
+    ];
+
+    const low = detectQuoteDrift(quotes, 'usdc-ngn').find((s) => s.anchorId === 'low')!;
+    expect(low.flagged).toBe(true);
+    expect(low.deviationPercent).toBeCloseTo(-15, 5);
+  });
+
+  it('probeQuoteDrift fetches every anchor, records samples, and never excludes a flagged anchor', async () => {
+    const store = new InMemoryDriftStore();
+    const anchors = [
+      testAnchor({ id: 'a' }),
+      testAnchor({ id: 'b' }),
+      testAnchor({ id: 'c' }),
+      testAnchor({ id: 'drifted' }),
+    ];
+    const rates: Record<string, number> = { a: 1500, b: 1500, c: 1500, drifted: 1650 };
+    const fetchRate = async (anchor: Anchor): Promise<RateProbeResult> => ({
+      ok: true,
+      rate: rates[anchor.id]!,
+    });
+
+    const samples = await probeQuoteDrift(anchors, 'usdc-ngn', '100', store, { fetchRate });
+
+    expect(samples).toHaveLength(4);
+    expect(store.samples()).toHaveLength(4);
+    const drifted = samples.find((s) => s.anchorId === 'drifted')!;
+    expect(drifted.flagged).toBe(true);
+    // Flagging never removes the anchor from the recorded comparison set.
+    expect(store.samples('drifted')).toHaveLength(1);
+  });
+
+  it('skips unreachable anchors from the median/comparison and does not record them', async () => {
+    const store = new InMemoryDriftStore();
+    const anchors = [testAnchor({ id: 'a' }), testAnchor({ id: 'down' }), testAnchor({ id: 'b' })];
+    const fetchRate = async (anchor: Anchor): Promise<RateProbeResult> =>
+      anchor.id === 'down' ? { ok: false, error: 'HTTP 521' } : { ok: true, rate: 1500 };
+
+    const samples = await probeQuoteDrift(anchors, 'usdc-ngn', '100', store, { fetchRate });
+
+    expect(samples).toHaveLength(2);
+    expect(samples.find((s) => s.anchorId === 'down')).toBeUndefined();
+  });
+
+  it('returns an empty result set when no anchor produces a usable quote', async () => {
+    const store = new InMemoryDriftStore();
+    const anchors = [testAnchor({ id: 'a' })];
+    const fetchRate = async (): Promise<RateProbeResult> => ({ ok: false, error: 'timeout' });
+
+    const samples = await probeQuoteDrift(anchors, 'usdc-ngn', '100', store, { fetchRate });
+
+    expect(samples).toHaveLength(0);
+    expect(store.samples()).toHaveLength(0);
+  });
+});
 
 const quoteOk = async (): Promise<QuoteProbeResult> => ({ ok: true });
 const quoteDown = async (): Promise<QuoteProbeResult> => ({ ok: false, error: 'HTTP 503' });
