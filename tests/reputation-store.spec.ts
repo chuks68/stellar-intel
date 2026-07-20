@@ -12,13 +12,19 @@ class SqliteBackedPgExecutor implements SqlExecutor {
   async query(text: string, params: unknown[] = []): Promise<{ rows: Record<string, unknown>[] }> {
     // Postgres $n params are positional-by-number and can appear out of textual
     // order, so map them to better-sqlite3 named params (@pN) for a faithful run.
+    // Multi-statement DDL (CREATE TABLE / INDEX blocks) must use exec(), not prepare().
+    const stmts = text.split(';').map((s) => s.trim()).filter(Boolean);
+    if (stmts.length > 1) {
+      this.db.exec(text);
+      return { rows: [] };
+    }
     const stmt = this.db.prepare(text.replace(/\$(\d+)/g, (_m, n) => `@p${n}`));
     const bind: Record<string, unknown> = {};
     params.forEach((v, i) => {
-      bind[`p${i + 1}`] = v as never;
+      bind[`p${i + 1}`] = (typeof v === 'boolean' ? (v ? 1 : 0) : v) as never;
     });
     const args = params.length ? [bind] : [];
-    if (/^\s*select/i.test(text)) {
+    if (/^\s*(select|delete.*returning)/i.test(text.trim())) {
       return { rows: stmt.all(...(args as never[])) as Record<string, unknown>[] };
     }
     stmt.run(...(args as never[]));

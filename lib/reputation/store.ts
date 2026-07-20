@@ -2,6 +2,8 @@ import type { OutcomeLogRow, ProbeLedgerRow } from '@/types/reputation';
 import { SqliteReputationStore } from './sqlite';
 import { PostgresReputationStore, type SqlExecutor } from './postgres';
 
+export const PROBE_RETENTION_DAYS = 90;
+
 // ─── Pluggable reputation store (Issue #128 / #219) ────────────────────────────
 //
 // One interface, swappable backends: SQLite for local/dev, Postgres for prod.
@@ -38,6 +40,8 @@ export interface ReputationStore {
   recordProbeSample(row: ProbeLedgerRow): Promise<void>;
   /** Query probe samples, optionally filtered to a single domain, oldest first. */
   queryProbeSamples(domain?: string): Promise<ProbeLedgerRow[]>;
+  /** Delete probe samples older than cutoff. Returns the number of rows removed. */
+  compactProbes(cutoff: Date): Promise<number>;
   close(): Promise<void>;
 }
 
@@ -89,6 +93,17 @@ export class InMemoryReputationStore implements ReputationStore {
   async queryProbeSamples(domain?: string): Promise<ProbeLedgerRow[]> {
     const rows = domain ? this.probeSamples.filter((r) => r.domain === domain) : this.probeSamples;
     return rows.map((r) => ({ ...r })).sort((a, b) => a.probedAt.localeCompare(b.probedAt));
+  }
+
+  async compactProbes(cutoff: Date): Promise<number> {
+    const cutoffIso = cutoff.toISOString();
+    const before = this.probeSamples.length;
+    this.probeSamples.splice(
+      0,
+      this.probeSamples.length,
+      ...this.probeSamples.filter((r) => r.probedAt >= cutoffIso)
+    );
+    return before - this.probeSamples.length;
   }
 
   async close(): Promise<void> {

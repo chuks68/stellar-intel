@@ -70,13 +70,12 @@ function fromDb(r: Record<string, unknown>): OutcomeLogRow {
 }
 
 function fromProbeDb(r: Record<string, unknown>): ProbeLedgerRow {
-  const asString = (v: unknown): string | null => (v == null ? null : String(v));
   return {
     domain: String(r['domain']),
     reachable: Boolean(r['reachable']),
     latencyMs: Number(r['latency_ms']),
     failureType: (r['failure_type'] as ProbeLedgerRow['failureType']) ?? null,
-    error: asString(r['error']),
+    error: (r['error'] as string) ?? null,
     probedAt: new Date(r['probed_at'] as string).toISOString(),
   };
 }
@@ -87,15 +86,7 @@ export class PostgresReputationStore implements ReputationStore {
   constructor(private readonly sql: SqlExecutor) {}
 
   private init(): Promise<void> {
-    if (!this.ready) {
-      const statements = CREATE_TABLE_SQL.split(';')
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
-      this.ready = statements.reduce<Promise<void>>(
-        (chain, stmt) => chain.then(() => this.sql.query(stmt + ';').then(() => undefined)),
-        Promise.resolve()
-      );
-    }
+    if (!this.ready) this.ready = this.sql.query(CREATE_TABLE_SQL).then(() => undefined);
     return this.ready;
   }
 
@@ -201,6 +192,15 @@ export class PostgresReputationStore implements ReputationStore {
     }
     const { rows } = await this.sql.query('SELECT * FROM probe_samples ORDER BY probed_at ASC');
     return rows.map(fromProbeDb);
+  }
+
+  async compactProbes(cutoff: Date): Promise<number> {
+    await this.init();
+    const { rows } = await this.sql.query(
+      `DELETE FROM probe_samples WHERE probed_at < $1 RETURNING domain`,
+      [cutoff.toISOString()]
+    );
+    return rows.length;
   }
 
   async close(): Promise<void> {
