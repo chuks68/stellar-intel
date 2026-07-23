@@ -3,6 +3,7 @@ import { withRequestLogger } from '@/lib/logger';
 import { isValidCorridorId } from '@/lib/stellar/anchors';
 import { fetchCorridorRates } from '@/lib/stellar/server-rates';
 import { AMOUNT_PATTERN } from '@/lib/patterns';
+import { getCachedRates, setCachedRates } from '@/lib/api/rates-cache';
 
 // Live anchor calls must run per-request, never at build time.
 export const dynamic = 'force-dynamic';
@@ -33,7 +34,30 @@ export async function GET(
       );
     }
 
+    const cacheControl = request.headers.get('cache-control') || '';
+    const pragma = request.headers.get('pragma') || '';
+    const forceRefreshParam = new URL(request.url).searchParams.get('forceRefresh') === 'true';
+    const forceRefresh =
+      cacheControl.includes('no-cache') ||
+      cacheControl.includes('no-store') ||
+      pragma.includes('no-cache') ||
+      forceRefreshParam;
+
+    const cached = getCachedRates(corridor, amount, forceRefresh);
+    if (cached) {
+      logger.info({
+        event: 'rates_cache_hit',
+        corridor,
+        amount,
+      });
+      return NextResponse.json(cached, {
+        headers: { 'Cache-Control': 'public, max-age=15, stale-while-revalidate=60' },
+      });
+    }
+
     const result = await fetchCorridorRates(corridor, amount);
+    setCachedRates(corridor, amount, result);
+
     logger.info({
       event: 'rates_fetched',
       corridor,
